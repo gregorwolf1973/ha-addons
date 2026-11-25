@@ -22,8 +22,10 @@ jobs:
     with: {addon: "<addon-folder>", image: "ghcr.io/gregorwolf1973/{arch}-addon-<slug>"}
 ```
 
-Optional input `archs` (JSON list, default `["aarch64","amd64"]`); `armv7` is built via QEMU.
-The architectures must match the `arch:` list in `config.yaml`.
+The architectures are read automatically from the `arch:` list in `config.yaml`
+(aarch64 and amd64 build natively, armv7/armhf via QEMU, i386 on amd64). The optional
+input `archs` (JSON list, e.g. `'["amd64"]'`) overrides this. The image also gets the
+labels `io.hass.version`, `io.hass.type`, `io.hass.arch` and `io.hass.name`.
 
 ## 2. `config.yaml` of the add-on
 

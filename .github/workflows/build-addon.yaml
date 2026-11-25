@@ -15,16 +15,54 @@ on:
         required: true
         type: string
       archs:
-        description: "JSON list of architectures (aarch64, amd64, armv7)"
+        description: "Optional override: JSON list of architectures (default: arch list of config.yaml)"
         required: false
         type: string
-        default: '["aarch64","amd64"]'
+        default: ""
 
 jobs:
+  matrix:
+    name: Read architectures
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      archs: ${{ steps.archs.outputs.archs }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Architectures from config.yaml
+        id: archs
+        env:
+          ADDON: ${{ inputs.addon }}
+          OVERRIDE: ${{ inputs.archs }}
+        run: |
+          if [ -n "$OVERRIDE" ]; then
+            echo "archs=$OVERRIDE" >> "$GITHUB_OUTPUT"
+          else
+            python3 - "$ADDON/config.yaml" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, re, sys
+          archs, inside = [], False
+          for line in open(sys.argv[1]):
+              if re.match(r'^arch:\s*$', line):
+                  inside = True
+                  continue
+              if inside:
+                  m = re.match(r'^\s+-\s*["\']?([A-Za-z0-9_]+)', line)
+                  if m:
+                      archs.append(m.group(1))
+                  elif line.strip() and not line.lstrip().startswith('#'):
+                      break
+          if not archs:
+              sys.exit("no arch list found in config.yaml")
+          print("archs=" + json.dumps(archs))
+          PY
+          fi
+
   build:
     name: Build ${{ matrix.arch }}
+    needs: matrix
     # Native Runner: QEMU stuerzt bei manchen Paketen ab (z. B. ldconfig).
-    # armv7 laeuft nur per QEMU auf amd64.
+    # armv7/armhf/i386 laufen auf amd64 (armv7/armhf per QEMU).
     runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
@@ -32,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(inputs.archs) }}
+        arch: ${{ fromJSON(needs.matrix.outputs.archs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +84,7 @@ jobs:
         run: |
           # Version aus config.yaml
           VERSION=$(grep -m1 '^version:' "$ADDON/config.yaml" | awk '{print $2}' | tr -d "\"'")
+          NAME=$(grep -m1 '^name:' "$ADDON/config.yaml" | sed 's/^name:[[:space:]]*//' | tr -d "\"'")
           # BUILD_FROM aus build.yaml (build_from: <arch>: <image>) oder build.json
           BASE=""
           if [ -f "$ADDON/build.yaml" ]; then
@@ -55,17 +94,19 @@ jobs:
           fi
           {
             echo "version=$VERSION"
+            echo "name=$NAME"
             echo "base=$BASE"
             echo "image=${IMAGE//\{arch\}/$ARCH}"
             case "$ARCH" in
               aarch64) echo "platform=linux/arm64" ;;
-              armv7) echo "platform=linux/arm/v7" ;;
+              armv7|armhf) echo "platform=linux/arm/v7" ;;
+              i386) echo "platform=linux/386" ;;
               *) echo "platform=linux/amd64" ;;
             esac
           } >> "$GITHUB_OUTPUT"
 
-      - name: Set up QEMU (armv7 only)
-        if: matrix.arch == 'armv7'
+      - name: Set up QEMU (32-bit ARM only)
+        if: matrix.arch == 'armv7' || matrix.arch == 'armhf'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -90,6 +131,11 @@ jobs:
             BUILD_VERSION=${{ steps.info.outputs.version }}
             BUILD_ARCH=${{ matrix.arch }}
             ${{ steps.info.outputs.base != '' && format('BUILD_FROM={0}', steps.info.outputs.base) || '' }}
+          labels: |
+            io.hass.version=${{ steps.info.outputs.version }}
+            io.hass.type=addon
+            io.hass.arch=${{ matrix.arch }}
+            io.hass.name=${{ steps.info.outputs.name }}
           tags: |
             ${{ steps.info.outputs.image }}:${{ steps.info.outputs.version }}
             ${{ steps.info.outputs.image }}:latest
