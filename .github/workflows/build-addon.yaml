@@ -1,0 +1,97 @@
+# Wiederverwendbarer Workflow: baut ein Add-on je Architektur auf nativem
+# Runner und schiebt es nach GHCR (Tags <version> und latest).
+# Wird in Phase 2 aus den Einzel-Repos aufgerufen (siehe docs/phase2.md).
+name: Build add-on image
+
+on:
+  workflow_call:
+    inputs:
+      addon:
+        description: "Path of the add-on folder (contains config.yaml and Dockerfile)"
+        required: true
+        type: string
+      image:
+        description: "Image name with {arch}, e.g. ghcr.io/owner/{arch}-addon-name"
+        required: true
+        type: string
+      archs:
+        description: "JSON list of architectures (aarch64, amd64, armv7)"
+        required: false
+        type: string
+        default: '["aarch64","amd64"]'
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    # Native Runner: QEMU stuerzt bei manchen Paketen ab (z. B. ldconfig).
+    # armv7 laeuft nur per QEMU auf amd64.
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.archs) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version, base image and image name
+        id: info
+        env:
+          ADDON: ${{ inputs.addon }}
+          IMAGE: ${{ inputs.image }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          # Version aus config.yaml
+          VERSION=$(grep -m1 '^version:' "$ADDON/config.yaml" | awk '{print $2}' | tr -d "\"'")
+          # BUILD_FROM aus build.yaml (build_from: <arch>: <image>) oder build.json
+          BASE=""
+          if [ -f "$ADDON/build.yaml" ]; then
+            BASE=$(awk -v a="$ARCH" '$1==a":"{print $2}' "$ADDON/build.yaml" | tr -d "\"'")
+          elif [ -f "$ADDON/build.json" ]; then
+            BASE=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('build_from',{}).get(sys.argv[2],''))" "$ADDON/build.json" "$ARCH")
+          fi
+          {
+            echo "version=$VERSION"
+            echo "base=$BASE"
+            echo "image=${IMAGE//\{arch\}/$ARCH}"
+            case "$ARCH" in
+              aarch64) echo "platform=linux/arm64" ;;
+              armv7) echo "platform=linux/arm/v7" ;;
+              *) echo "platform=linux/amd64" ;;
+            esac
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU (armv7 only)
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.addon }}
+          file: ${{ inputs.addon }}/Dockerfile
+          platforms: ${{ steps.info.outputs.platform }}
+          push: true
+          # BUILD_FROM nur setzen, wenn build.yaml eine Basis nennt
+          build-args: |
+            BUILD_VERSION=${{ steps.info.outputs.version }}
+            BUILD_ARCH=${{ matrix.arch }}
+            ${{ steps.info.outputs.base != '' && format('BUILD_FROM={0}', steps.info.outputs.base) || '' }}
+          tags: |
+            ${{ steps.info.outputs.image }}:${{ steps.info.outputs.version }}
+            ${{ steps.info.outputs.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.arch }},mode=max

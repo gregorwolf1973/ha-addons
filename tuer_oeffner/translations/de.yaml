@@ -1,0 +1,122 @@
+configuration:
+  tuer_entitaet:
+    name: Tür-Entität
+    description: >-
+      Was die Tür öffnet, z. B. switch.haustuer oder die vorhandene Automation
+      automation.door_open_for_5_seconds_for_use_intern_only. Unterstützt:
+      switch, input_boolean, script, button, input_button, lock, automation.
+  externe_adresse:
+    name: Externe Adresse
+    description: >-
+      Die https-Adresse, unter der die Freunde die App öffnen. Wird für
+      Passkeys gebraucht.
+  radius_meter:
+    name: Radius (Meter)
+    description: >-
+      Bis zu dieser Entfernung von der Haustür darf geöffnet werden. Zugänge
+      mit Fern-Recht sind davon ausgenommen.
+  benachrichtigung:
+    name: Benachrichtigung
+    description: >-
+      Name des notify-Dienstes für die Push-Nachricht bei jedem Öffnen und
+      jeder neuen Registrierung, z. B. mobile_app_pixel_8.
+  breitengrad:
+    name: Breitengrad der Haustür
+    description: Leer = Standort aus Home Assistant (Einstellungen → System → Allgemein).
+  laengengrad:
+    name: Längengrad der Haustür
+    description: Leer = Standort aus Home Assistant.
+  sitzung_tage:
+    name: Anmeldung gilt (Tage)
+    description: Danach ist wieder Passwort und Code oder Passkey nötig.
+  registrierung_offen:
+    name: Registrierung offen
+    description: Aus = niemand Neues kann sich registrieren.
+  zwei_faktor_pflicht:
+    name: 2FA ist Pflicht
+    description: >-
+      An = jeder muss eine Authenticator-App einrichten. Aus = Anmeldung mit
+      Passwort reicht, jeder kann die 2FA in der App unter „Konto“ selbst
+      ein- und ausschalten.
+  warmwasser_entitaet:
+    name: Warmwasser aufheizen
+    description: >-
+      Was das Aufheizen startet, z. B. der ViCare-Knopf
+      button.e3_vitocal_einmalige_aufladung_aktivieren. Leer = keine
+      Warmwasser-Funktion. Wer sie bekommt, legst du in der Verwaltung fest
+      (Spalte „Familie“).
+  warmwasser_temperatur:
+    name: Warmwasser-Temperatur
+    description: Sensor für die Anzeige in der App, z. B. sensor.e3_vitocal_ww_speichertemperatur. Leer = keine Anzeige.
+  warmwasser_laeuft:
+    name: Warmwasser lädt gerade
+    description: >-
+      binary_sensor, der an ist, solange aufgeheizt wird, z. B.
+      binary_sensor.e3_vitocal_einmalige_ladung. Verhindert doppeltes Starten.
+  warmwasser_heizt:
+    name: Wärmepumpe heizt gerade
+    description: >-
+      binary_sensor, der an ist, solange der Kompressor läuft, z. B.
+      binary_sensor.e3_vitocal_kompressor. Erst damit zeigt die App „heizt
+      gerade“ – sonst nur „angefordert“.
+  warmwasser_soll:
+    name: Warmwasser-Zieltemperatur
+    description: >-
+      number-Entität mit der Solltemperatur, z. B.
+      number.e3_vitocal_ww_temperatur. Beim Drücken von „Wasser aufheizen“
+      wird sie auf die Vorgabe aus der Verwaltung gestellt (anfangs 50 °C).
+  staubsauger_entitaet:
+    name: Staubsauger
+    description: >-
+      Der Saugroboter, z. B. vacuum.roborock_s7_maxv_2. Die Familie kann ihn
+      in der App starten und zur Station schicken. Leer = keine Anzeige.
+  staubsauger_batterie:
+    name: Staubsauger-Akku
+    description: Sensor für den Akkustand, z. B. sensor.roborock_s7_maxv_2_batterie. Leer = Akku aus dem Staubsauger selbst.
+  kamera_entitaet:
+    name: Kamera an der Haustür
+    description: >-
+      Livebild in der Haustür-Karte, nur für Zugänge der Familie, z. B.
+      camera.t62_mainstream. Abgefragt wird nur, solange die App offen und das
+      Bild zu sehen ist. Leer = kein Livebild.
+  pollen_praefix:
+    name: Pollenflug
+    description: >-
+      Anfang der Entitäts-IDs der DWD-Pollenflug-Integration, z. B.
+      sensor.pollenflug_ – alle passenden Sensoren erscheinen in der App
+      (nur Familie). Leer = keine Pollen-Karte.
+  wlan_name:
+    name: Gäste-WLAN – Name (SSID)
+    description: >-
+      Jeder freigegebene Zugang bekommt in der App einen Knopf, der Name,
+      Schlüssel und einen QR-Code zum Verbinden zeigt. Leer = kein WLAN-Knopf.
+  wlan_schluessel:
+    name: Gäste-WLAN – Schlüssel
+  wlan_verschluesselung:
+    name: Gäste-WLAN – Verschlüsselung
+    description: WPA gilt auch für WPA2 und WPA3.
+  hausdienst:
+    name: Hausdienst
+    description: >-
+      Plan, Morgenanrufe und Bewertung des Hausdienstes. Aus = in App und
+      Verwaltung nicht zu sehen, keine Anrufe; die eingetragenen Daten bleiben
+      erhalten.
+  sip_addon:
+    name: Hausdienst – ha-sip-Add-on
+    description: >-
+      Slug des Add-ons ha-sip, das die Erinnerungsanrufe wählt. Leer = keine
+      Anrufe.
+  sip_konto:
+    name: Hausdienst – SIP-Konto in ha-sip
+    description: >-
+      Welches Konto von ha-sip anruft (1 bis 3). Ein eigenes Konto hält die
+      anderen Anrufe (z. B. einen Notruf) frei.
+  sip_server:
+    name: Hausdienst – SIP-Server
+    description: >-
+      Adresse der Telefonanlage, an die die Nummern gehen, z. B. 192.168.178.1
+      für die Fritz!Box.
+  log_level:
+    name: Protokollstufe
+network:
+  8097/tcp: App für die Freunde (für den Cloudflare-Tunnel)

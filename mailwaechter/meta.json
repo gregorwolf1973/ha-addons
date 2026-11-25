@@ -1,0 +1,1 @@
+{"name": "Mailwächter", "description": "Überwacht das Gmail-Postfach per IMAP IDLE, prüft jede neue Mail auf Betrug und verschiebt gefährliche Mails", "version": "0.2.0", "arch": ["aarch64", "amd64"]}

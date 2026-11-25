@@ -1,0 +1,155 @@
+{
+ "owner": "gregorwolf1973",
+ "addons": [
+  {
+   "repo": "addon-startpanel",
+   "path": "startpanel",
+   "slug": "startpanel",
+   "aktiv": false
+  },
+  {
+   "repo": "chat-server-addon",
+   "path": "chat_server",
+   "slug": "chat_server",
+   "aktiv": true
+  },
+  {
+   "repo": "Chromium_light_browser",
+   "path": "chromium_light_browser",
+   "slug": "chromium_light_browser",
+   "aktiv": false
+  },
+  {
+   "repo": "clamav-hassio-addon",
+   "path": "clamav",
+   "slug": "clamav",
+   "aktiv": false
+  },
+  {
+   "repo": "cloudflare-routes-addon",
+   "path": "cloudflare_routes",
+   "slug": "cloudflare_routes",
+   "aktiv": false
+  },
+  {
+   "repo": "crowdsec-cloudflare-bouncer-addon",
+   "path": "crowdsec_cloudflare_bouncer",
+   "slug": "crowdsec_cloudflare_bouncer",
+   "aktiv": false
+  },
+  {
+   "repo": "crowdsec-dashboard-addon",
+   "path": "crowdsec-dashboard",
+   "slug": "crowdsec-dashboard",
+   "aktiv": false
+  },
+  {
+   "repo": "EasyNas-HASSIO-Addon",
+   "path": "simple_nas",
+   "slug": "simple_nas",
+   "aktiv": false
+  },
+  {
+   "repo": "fotoarchiv-addon",
+   "path": "fotoarchiv",
+   "slug": "fotoarchiv",
+   "aktiv": false
+  },
+  {
+   "repo": "fritz-network-addon",
+   "path": "fritzbox_metrics",
+   "slug": "fritzbox_metrics",
+   "aktiv": false
+  },
+  {
+   "repo": "fritz-network-addon",
+   "path": "fritzbox_network",
+   "slug": "fritzbox_network",
+   "aktiv": false
+  },
+  {
+   "repo": "guacamole-stable-addon",
+   "path": "guacamole",
+   "slug": "guacamole",
+   "aktiv": true
+  },
+  {
+   "repo": "ha-addon-german-tv",
+   "path": "german_tv",
+   "slug": "german_tv",
+   "aktiv": false
+  },
+  {
+   "repo": "ha-guardian",
+   "path": "guardian",
+   "slug": "guardian",
+   "aktiv": false
+  },
+  {
+   "repo": "hardware-monitor-addon",
+   "path": "hardware_monitor",
+   "slug": "hardware_monitor",
+   "aktiv": false
+  },
+  {
+   "repo": "Hassioadon_Dokuwiki",
+   "path": "dokuwiki",
+   "slug": "dokuwiki",
+   "aktiv": false
+  },
+  {
+   "repo": "Hassio_Heimdall",
+   "path": "heimdal",
+   "slug": "heimdal",
+   "aktiv": false
+  },
+  {
+   "repo": "LibrePhotos-HASSIO-Addon",
+   "path": "librephotos",
+   "slug": "librephotos",
+   "aktiv": false
+  },
+  {
+   "repo": "mailwaechter-addon",
+   "path": "mailwaechter",
+   "slug": "mailwaechter",
+   "aktiv": true
+  },
+  {
+   "repo": "onionshare-addon",
+   "path": "onionshare",
+   "slug": "onionshare",
+   "aktiv": false
+  },
+  {
+   "repo": "PictureView",
+   "path": "picture_view",
+   "slug": "picture_view",
+   "aktiv": false
+  },
+  {
+   "repo": "Racon-addon",
+   "path": "recon",
+   "slug": "recon",
+   "aktiv": false
+  },
+  {
+   "repo": "seafile-hassio-addon",
+   "path": "seafile",
+   "slug": "seafile",
+   "aktiv": false
+  },
+  {
+   "repo": "snappymail-addon",
+   "path": "snappymail",
+   "slug": "snappymail",
+   "aktiv": true
+  },
+  {
+   "repo": "tuer-oeffner-addon",
+   "path": "tuer_oeffner",
+   "slug": "tuer_oeffner",
+   "aktiv": true
+  }
+ ]
+}

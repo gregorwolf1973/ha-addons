@@ -1,0 +1,215 @@
+# Änderungen
+
+## 0.17.0
+
+- **Hausdienst abschaltbar** (neue Option „Hausdienst“, Voreinstellung: aus).
+  Ausgeschaltet verschwindet die Karte aus der App und der Bereich aus der
+  Verwaltung, es gibt keine Morgen- und Tauschanrufe und keine
+  Bewertungs-Hinweise mehr. Plan, Personen und Bewertungen bleiben gespeichert
+  und sind nach dem Einschalten wieder da.
+
+## 0.16.0
+
+- Hausdienst: **Anrufe je Person.** Die Verwaltung schaltet Anrufe für jede
+  Person ein oder aus (Schalter in der Anruftabelle). Aus heißt: weder
+  Morgenanruf noch Anruf bei Tauschanfragen; Anfragen laufen dann nur über die
+  App. Der Testanruf geht weiter.
+- Hausdienst: **Nächsten Anruf absagen.** In der App steht „Nächster Anruf:
+  Mittwoch, 4.11. um 06:00“ mit „Nicht anrufen“ und „Doch anrufen“. Vor der
+  Anrufzeit gilt die Absage für heute, sonst für morgen. Beide Anrufe des Tages
+  entfallen; Tauschanfragen bleiben. Die Verwaltung sieht die Absage.
+- Hausdienst-Bewertung: Die Stufen heißen jetzt top, gut, nicht so gut, gar nicht
+  (vorher gut, naja, …); gespeicherte Bewertungen bleiben unverändert.
+
+## 0.15.0
+
+- Hausdienst: **Bewertung.** Ab 16 Uhr bewertet jeder die heutigen Dienste der
+  anderen (gut, naja, nicht so gut, gar nicht), anonym und bis Mitternacht
+  änderbar. In der App steht „Deine Bewertung“ (Woche, Monat, insgesamt), in der
+  Verwaltung alles samt Bewerter; dort kann man auch selbst mitbewerten. Sonntags und
+  am Monatsletzten ab 21 Uhr fasst die Glocke zusammen. Nach drei Monaten werden
+  Bewertungen gelöscht.
+
+## 0.14.2
+
+- Verwaltung: Der Umbruch der Aufgabennamen aus 0.14.1 greift jetzt wirklich.
+
+## 0.14.1
+
+- Verwaltung: Lange Aufgabennamen im Plan brechen um, statt in die Montagsspalte
+  zu laufen.
+
+## 0.14.0
+
+- Verwaltung: **Ein Plan statt zwei Raster.** Eine Tabelle (Aufgaben × Tage) mit
+  Umschalter „Jede Woche (Vorlage)“ und den nächsten zwei Wochen. Zelle antippen,
+  Personen abhaken – fertig. Jede Person hat ihre Farbe, abweichende Tage sind
+  markiert, „↺ wie Vorlage“ setzt eine Zelle zurück. Darunter zählt eine Zeile
+  die Dienste je Person. Auf dem Handy erscheint eine Liste pro Tag.
+
+## 0.13.1
+
+- App: „Dein Plan“ zeigt die nächsten drei Dienste, die übrigen klappen mit
+  „Alle anzeigen“ auf.
+
+## 0.13.0
+
+- Hausdienst: **Tausch direkt untereinander.** In der App fragt man eine
+  andere Person, ob sie einen eigenen Dienst übernimmt. Sie wird angerufen
+  (nur zwischen 7 und 21 Uhr, nachts gestellte Anfragen am Morgen) und
+  antwortet mit 1 = ja oder 2 = nein – oder in der App. Bei Ja ist der Dienst
+  sofort bei ihr, du bekommst eine Info in die Glocke. Unbeantwortete
+  Anfragen verschwinden, wenn der Tag vorbei ist. Das bisherige „Umplanen
+  beantragen“ entfällt; „Pause beantragen“ bleibt ein Antrag an dich.
+- Jeder mit Zugang stellt die **Uhrzeit für den Anruf am Morgen** selbst in
+  der App ein (für jeden Tag und einzelne Wochentage). Die Telefonnummer
+  bleibt in der Verwaltung.
+- Verwaltung: Die Spalte „Uhrzeit“ heißt jetzt „Jeden Tag“; die Tauschanfragen
+  der letzten Tage stehen oben beim Hausdienst.
+
+## 0.12.2
+
+- Verwaltung: Personen, Aufgaben und Pausen überlappen sich nicht mehr.
+  Personen und Aufgaben stehen nebeneinander, die Pausen darunter.
+
+## 0.12.1
+
+- Hausdienst: **Personen** legst du jetzt selbst an, auch ohne Zugang zum
+  Türöffner. Angerufen wird jede Person mit Telefonnummer. Wer einen Zugang
+  mit Haken „Familie“ hat, lässt sich mit seiner Person verknüpfen – auch
+  wenn der Zugang noch nicht freigegeben ist. Nach der Freigabe sieht er
+  seinen Plan in der App und kann Anträge stellen. Bisherige Einträge werden beim Start
+  übernommen: Jeder Zugang mit Haken „Familie“ wird zu einer Person.
+- Verwaltung: Meldungen (z. B. „Bitte Person und einen gültigen Zeitraum
+  angeben“) bleiben oben im Bild stehen, auch wenn du weiter unten beim
+  Hausdienst arbeitest. Vorher erschienen sie unbemerkt am Seitenanfang.
+- Die Auswahl „Wer?“ bei den Pausen springt nach dem Speichern anderer
+  Hausdienst-Einträge nicht mehr auf leer zurück.
+
+## 0.12.0
+
+- Neu: **Hausdienst** für die Familie. In der Verwaltung legst du Aufgaben an
+  (z. B. Küche → „Küchendienst“) und planst, wer an welchem Wochentag welche
+  Aufgabe hat. Der Plan wiederholt sich jede Woche. Einzelne Tage lassen sich
+  umplanen, ausfallen lassen oder um einen Dienst ergänzen; Pausen setzen die
+  Dienste einer Person aus.
+- In der App sieht die Familie, wer heute was macht, und unter „Dein Plan“
+  die eigenen Dienste der nächsten vier Wochen. Von dort lässt sich
+  beantragen, dass jemand anders einen Dienst übernimmt, oder eine Pause.
+  Anträge landen in der Glocke von Home Assistant; du genehmigst oder lehnst
+  in der Verwaltung ab, genehmigte Anträge werden sofort eingetragen.
+- **Anruf am Morgen** über das Add-on ha-sip: zur Uhrzeit, die du je Person
+  (und bei Bedarf je Wochentag) einstellst. Die Ansage wiederholt sich, damit
+  sie auch auf der Mailbox ankommt; Taste 1 heißt „verstanden“. Ohne Taste 1
+  kommt nach 30 Minuten ein zweiter Anruf. Ansagetext, Testanruf und die
+  letzten Anrufe stehen in der Verwaltung.
+- Neue Optionen `sip_addon`, `sip_konto` und `sip_server`. Das Add-on liest
+  jetzt stdin, darüber meldet ha-sip die Taste 1 zurück.
+
+## 0.11.0
+
+- Warmwasser: Die Zieltemperatur kommt nicht mehr aus Home Assistant, sondern
+  ist eine **Vorgabe** in der Verwaltung (anfangs 50 °C). Erst wenn jemand in
+  der App „Wasser aufheizen“ drückt, wird die Wärmepumpe auf die Vorgabe
+  gestellt und danach die einmalige Ladung gestartet – sonst nie. Steht sie
+  schon darauf, unterbleibt der Aufruf (ViCare begrenzt die Aufrufe je Tag).
+- Lässt sich die Zieltemperatur nicht setzen, startet keine Ladung, und die
+  App meldet den Fehler.
+- „Schon warm genug“ und das Ziel in der App beziehen sich auf die Vorgabe.
+- Verwaltung: Der Regler stellt die Vorgabe ein und zeigt daneben, worauf die
+  Wärmepumpe gerade steht. Das Protokoll nennt beim Aufheizen das Ziel und,
+  falls geändert, den Wert davor.
+
+## 0.10.0
+
+- Standort im Hintergrund mit **OwnTracks**: „OwnTracks einrichten“ erzeugt
+  eigene Zugangsdaten und einen Link, der OwnTracks fertig einrichtet.
+  OwnTracks schickt den Ort dann auch bei geschlossener App an
+  `/owntracks`; er erscheint in „Wo ist die Familie?“. Die Freigabe in der
+  App bleibt der Hauptschalter.
+
+## 0.9.0
+
+- „Wo ist die Familie?“: Jeder Familien-Zugang kann seinen Standort selbst
+  freigeben. Die anderen sehen ihn auf einer kleinen OpenStreetMap-Karte und
+  in einer Liste mit Entfernung von zu Hause, Alter und Link zu Google Maps.
+  Gesendet wird alle 2 Minuten, solange die App offen ist. Freigabe beenden
+  löscht den Ort sofort, alte Orte verschwinden nach 7 Tagen.
+
+## 0.8.0
+
+- Pollenflug für die Familie: Karte mit der DWD-Vorhersage für heute,
+  morgen und übermorgen. Belastete Arten stehen mit Farbstufe oben, die
+  übrigen eingeklappt. Neue Option `pollen_praefix`, voreingestellt die
+  DWD-Pollenflug-Integration.
+
+## 0.7.0
+
+- Warmwasser ehrlicher: „Heizt gerade“ nur, wenn der Kompressor läuft,
+  sonst „angefordert“. Ist das Wasser schon wärmer als die Zieltemperatur,
+  ist der Knopf gesperrt und die App sagt warum. Die Zieltemperatur steht
+  mit in der Karte.
+- Verwaltung übersichtlicher: jeder Zugang als Karte mit Schaltern für „Aus
+  der Ferne“ und „Familie“, Seltenes unter „Mehr“. Neu: die
+  Warmwasser-Zieltemperatur ist dort mit − / + einstellbar.
+- Neue Optionen `warmwasser_heizt` und `warmwasser_soll`.
+
+## 0.6.0
+
+- Gäste-WLAN: Knopf „WLAN-QR-Code zeigen“ für jeden freigegebenen Zugang,
+  mit QR-Code zum Verbinden, WLAN-Name und Schlüssel (mit Kopieren). Neue
+  Optionen `wlan_name`, `wlan_schluessel` und `wlan_verschluesselung`.
+
+## 0.5.0
+
+- Die Haustür hat jetzt eine eigene Karte wie Warmwasser und Staubsauger.
+- Livebild der Kamera in der Haustür-Karte, nur für Zugänge der Familie.
+  Etwa ein Bild pro Sekunde – und nur, solange die App im Vordergrund und
+  das Bild zu sehen ist. Neue Option `kamera_entitaet`, voreingestellt die
+  T62. Mehrere offene Apps teilen sich ein Bild, die Kamera wird höchstens
+  gut einmal pro Sekunde gefragt.
+
+## 0.4.1
+
+- Die App ist jetzt dunkel. Unter „Konto“ → „Darstellung“ lässt sich auf
+  Hell oder „Wie das Handy“ umstellen; die Wahl merkt sich jedes Gerät.
+
+## 0.4.0
+
+- Staubsauger für die Familie: Status und Akku in der App, dazu „Saugen
+  starten“ und „Zur Station“. Neue Optionen `staubsauger_entitaet` und
+  `staubsauger_batterie`, voreingestellt der Roborock S7 MaxV.
+- Aus dem Recht „Warmwasser“ wird **„Familie“**: es schaltet Warmwasser und
+  Staubsauger zusammen frei. Wer das Warmwasser-Recht hatte, gehört
+  automatisch zur Familie.
+- Verwaltung: eigene Spalte „Familie“ mit Knopf zum Hinzufügen und Entfernen,
+  dazu ein Hinweis, solange noch niemand zur Familie gehört.
+
+## 0.3.0
+
+- Warmwasser für die Familie: Zugänge mit dem neuen Recht „Warmwasser“
+  sehen in der App die Speichertemperatur und einen großen Knopf „Wasser
+  aufheizen“. Er löst die eingestellte Entität aus, voreingestellt die
+  einmalige Ladung der Vitocal-Wärmepumpe. Läuft schon eine Ladung, ist der
+  Knopf gesperrt.
+- Neue Optionen `warmwasser_entitaet`, `warmwasser_temperatur` und
+  `warmwasser_laeuft`.
+- Verwaltung: Spalte und Knopf für das Warmwasser-Recht, Aufheizen steht im
+  Protokoll.
+
+## 0.2.0
+
+- Anmelden mit Benutzername oder Mailadresse. Neue Zugänge wählen bei der
+  Registrierung einen Benutzernamen; bestehende melden sich weiter mit der
+  Mailadresse an.
+- Neue Option `zwei_faktor_pflicht`. Aus = Passwort reicht, jeder schaltet
+  die 2FA unter „Konto“ selbst ein oder aus (Ausschalten mit Passwort und
+  Code). Voreinstellung bleibt: Pflicht.
+- Passwort mindestens 8 statt 10 Zeichen.
+- Verwaltung zeigt Benutzername und ob die 2FA an ist.
+
+## 0.1.0
+
+- Erste Fassung: App für Freunde mit Registrierung, Pflicht-2FA (TOTP) und
+  Passkeys, Öffnen per Wisch mit Standortprüfung, Fern-Recht je Zugang,
+  Benachrichtigung bei jedem Öffnen, Verwaltung nur über den Ingress.

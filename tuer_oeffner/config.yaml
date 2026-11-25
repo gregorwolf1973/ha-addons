@@ -1,0 +1,82 @@
+name: Türöffner
+version: "0.17.0"
+slug: tuer_oeffner
+# Fertige Abbilder aus der GitHub-Registrierung. Ohne diese Zeile baut
+# jedes Geraet selbst - auf einem Pi dauert das viele Minuten.
+image: ghcr.io/gregorwolf1973/{arch}-addon-tuer_oeffner
+description: Haustür per Handy öffnen – eigene Zugänge für Freunde mit Passwort, 2FA (Pflicht oder freiwillig) und Passkey, Freigabe durch dich. Für die Familie zusätzlich Warmwasser aufheizen, Staubsauger steuern, Livebild der Kamera, Pollenflug, Standorte der Familie, Hausdienst-Plan mit Anruf am Morgen und Gäste-WLAN per QR-Code
+url: https://github.com/gregorwolf1973/tuer-oeffner-addon
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+# Fuer den Dienstaufruf (Tuer schalten, Benachrichtigung, Standort)
+homeassistant_api: true
+# Hausdienst: ha-sip meldet "Taste 1 gedrueckt" ueber hassio.addon_stdin zurueck
+stdin: true
+# Die Verwaltung gibt es NUR hier - aus dem Internet ist sie nicht erreichbar
+ingress: true
+ingress_port: 8097
+panel_icon: mdi:door-open
+panel_title: Türöffner
+panel_admin: true
+ports:
+  8097/tcp: 8097
+ports_description:
+  8097/tcp: App für die Freunde (für den Cloudflare-Tunnel)
+options:
+  tuer_entitaet: ""
+  externe_adresse: "https://tuer.biker633.org"
+  radius_meter: 200
+  benachrichtigung: ""
+  breitengrad: ""
+  laengengrad: ""
+  sitzung_tage: 30
+  registrierung_offen: true
+  zwei_faktor_pflicht: true
+  warmwasser_entitaet: "button.e3_vitocal_einmalige_aufladung_aktivieren"
+  warmwasser_temperatur: "sensor.e3_vitocal_ww_speichertemperatur"
+  warmwasser_laeuft: "binary_sensor.e3_vitocal_einmalige_ladung"
+  warmwasser_heizt: "binary_sensor.e3_vitocal_kompressor"
+  warmwasser_soll: "number.e3_vitocal_ww_temperatur"
+  staubsauger_entitaet: "vacuum.roborock_s7_maxv_2"
+  staubsauger_batterie: "sensor.roborock_s7_maxv_2_batterie"
+  kamera_entitaet: "camera.t62_mainstream"
+  pollen_praefix: "sensor.pollenflug_"
+  wlan_name: ""
+  wlan_schluessel: ""
+  wlan_verschluesselung: WPA
+  hausdienst: false
+  sip_addon: "c7744bff_ha-sip"
+  sip_konto: 2
+  sip_server: "192.168.178.1"
+  log_level: info
+schema:
+  tuer_entitaet: str?
+  externe_adresse: str?
+  radius_meter: int(20,5000)
+  benachrichtigung: str?
+  breitengrad: str?
+  laengengrad: str?
+  sitzung_tage: int(1,365)
+  registrierung_offen: bool
+  zwei_faktor_pflicht: bool
+  warmwasser_entitaet: str?
+  warmwasser_temperatur: str?
+  warmwasser_laeuft: str?
+  warmwasser_heizt: str?
+  warmwasser_soll: str?
+  staubsauger_entitaet: str?
+  staubsauger_batterie: str?
+  kamera_entitaet: str?
+  pollen_praefix: str?
+  wlan_name: str?
+  wlan_schluessel: password?
+  wlan_verschluesselung: list(WPA|WEP|offen)
+  hausdienst: bool
+  sip_addon: str?
+  sip_konto: int(1,3)
+  sip_server: str?
+  log_level: list(debug|info|warning|error)
