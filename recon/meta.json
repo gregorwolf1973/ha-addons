@@ -1,0 +1,1 @@
+{"name": "Recon", "description": "Network Scanner - IP/Port scanning with Nmap, WLAN scanning with iw", "version": "1.5.11", "arch": ["aarch64", "amd64"]}

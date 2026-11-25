@@ -1,0 +1,309 @@
+# Changelog
+
+## 1.30.1
+- Prebuilt images from GitHub Container Registry: installs and updates no
+  longer build locally.
+
+## 1.30.0 – 2026-07-19
+
+### Added
+- **Rule-free Nginx Proxy Manager detection** (opt-in, Settings → Detection): a behavioural catch-all that bans IPs accumulating `401`/`403` responses in the uniform NPM access-log format — on *any* proxied service, without a service-specific rule. Since every proxied app is normalised to the same `… - <status> … "<path>" [Client <ip>]` shape, one parser replaces the need for per-app rules and also catches unknown/new services. Uses the existing attempt threshold and whitelist. `404` is deliberately excluded (noisy); scanner probing stays the opt-in `http_scan_404` rule. Detected bans show up as `generic_npm_401` / `generic_npm_403` in the dashboard.
+
+## 1.29.0 – 2026-07-19
+
+### Fixed – Detection rules audited & hardened
+- **SSH rules now detect IPv6** attackers (`ssh_fail`, `ssh_invalid_user`, `ssh_pam_auth_fail`) — previously only IPv4 was captured
+- **`ssh_preauth`**: also matches `Connection reset by … [preauth]` (common scanner signature)
+- **`dovecot_postfix`**: now catches Postfix `unknown[IP]: SASL … authentication failed` — the most common SASL brute-force line
+- **`dokuwiki_auth`**: matches tab-separated `LOGIN FAILURE\t<user>\t<ip>` in addition to `ip="…"` format
+- **`photoprism_login`**: matches `/api/v1/session` with or without an ingress path prefix
+- **`gitea_forgejo_bf`**: recognises `Failed authentication attempt …` wording
+- **`proxmox_bf`**: removed a dead pattern alternative that matched without capturing an IP (produced no ban)
+- **`ftp_fail`**: now covers vsftpd `Client "IP"`, proftpd `no such user found from IP`, and `authentication failed`
+- **`apache_auth_fail`**: real Apache error logs put `[client IP]` **before** the failure message — the rule now captures the IP in either position (a genuine miss before)
+- Added a regression test harness: all 30 rules verified against realistic sample lines with false-positive guards (benign 200/Accepted/successful-login lines must not match)
+
+## 1.28.0 – 2026-07-19
+
+### Added
+- **Home Assistant notification on each ban**: Guardian now creates a persistent notification in HA whenever it bans an IP (toggle under Settings → Ban Targets, on by default). Requires the new `homeassistant_api` permission
+- **CrowdSec LAPI auto-discovery**: an "Auto-discover" button next to the LAPI URL field detects the CrowdSec addon via the Supervisor API and fills in the URL — no more looking up the container IP in the logs
+- **Setup banner on Dashboard**: guides first-time users — warns if no log sources are enabled, and offers a one-click "Enable NPM monitoring" button when Nginx Proxy Manager is detected but not monitored
+- **Stale-source badge** on the Addons tab: a health check now runs automatically (silently) and shows a red counter on the tab when a source has no recent entries — no need to click "Health Check" manually
+- **Styled confirmation dialogs**: destructive actions (unban, delete source/rule, factory reset, disable My-IP protection) now use an in-app modal instead of the browser's native `confirm()`
+
+### Changed
+- **Settings simplified**: the four scanning-interval fields are collapsed into an "Advanced" section — defaults are fine for most setups
+- **Actionable empty states** and English wording consistency across the UI
+
+### Fixed
+- **Log preview title showed "undefined"**: `previewSource` was defined twice; the shadowing definition broke the modal title
+- **"Unmatched Auth Lines" never loaded**: the table on the Rules tab stayed empty because `loadUnmatched()` was never called on tab switch
+- **Version display**: hardcoded `v1.5.0` badge removed; `VERSION` in `guardian.py` synced (was 1.27.3, out of step with config.yaml)
+- Removed dead code (`previewAddon`, unused `removeWhitelist`)
+
+## 1.27.1 – 2026-04-19
+
+### Fixed
+- **Log Discovery**: `discover_interval_minutes` Default von 15 auf 1 Minute gesenkt — neue Tages-Log-Dateien (z.B. DokuWiki `2026-04-19.log`) werden jetzt automatisch innerhalb 1 Minute erkannt
+- **DokuWiki Regel**: `dokuwiki_auth` Pattern erkennt jetzt auch `[AUTHFAIL] user="..." ip="X.X.X.X"` Format und extrahiert die IP korrekt
+- **Rule Editor Bug**: Edit-Button übergab Rule-Data per inline JSON im HTML — Regex-Backslashes beschädigten das JSON und zeigten beim zweiten Edit die falsche Regel. Fix: Rules werden per ID aus einem Cache geladen
+
+## 1.27.0 – 2026-04-19
+
+### Added
+- **10 neue Erkennungsregeln** inspiriert von CrowdSec Hub Scenarios:
+  - `ssh_invalid_user` – SSH Invalid user (crowdsecurity/ssh-bf)
+  - `ssh_preauth` – SSH Connection closed/disconnected during [preauth]
+  - `ssh_pam_auth_fail` – SSH PAM authentication failure mit rhost=
+  - `wordpress_bf` – WordPress wp-login.php Brute Force, HTTP 200 (crowdsecurity/http-bf-wordpress_bf)
+  - `wp_xmlrpc` – WordPress xmlrpc.php Brute Force (crowdsecurity/http-wordpress-xmlrpc)
+  - `http_scan_404` – HTTP Scanner / Probing via 404s (crowdsecurity/http-probing, standardmäßig deaktiviert)
+  - `roundcube_bf` – Roundcube Webmail Failed Login
+  - `gitea_forgejo_bf` – Gitea/Forgejo Failed Login
+  - `proxmox_bf` – Proxmox VE Authentication Failure
+  - `ftp_fail` – FTP Login Failure
+  - `imap_dovecot_bf` – Dovecot IMAP failed login mit rip= (crowdsecurity/dovecot-bf)
+  - `apache_auth_fail` – Apache authentication failure (crowdsecurity/apache2-bf)
+
+## 1.26.0 – 2026-04-10
+
+### Added
+- **Configurable log discovery interval**: Guardian now periodically searches for new log files and addon sources. Interval is configurable in minutes via the Settings tab (default: 15 minutes, previously hardcoded to 5 minutes).
+
+## 1.25.0 – 2026-04-04
+
+### Changed
+- All documentation (README, DOCS, CHANGELOG) translated to English
+- German README available as README.de.md
+
+## 1.24.8 – 2026-04-04
+
+### Fixed
+- CrowdSec: canonical Go duration format (`Xh Ym0s`) + payload logging for debugging
+
+## 1.24.7 – 2026-04-04
+
+### Fixed
+- CrowdSec: `decision.duration` is the only field controlling ban expiry — `stop_at` is just alert metadata
+
+## 1.24.5 – 2026-04-03
+
+### Added
+- **Unused Sources**: Log-Dateien können über Reassign → Unused als ungenutzt markiert werden
+- **Ban Targets**: Separate Toggles für ip_bans.yaml und CrowdSec im Settings-Tab
+
+### Fixed
+- Redundantes "Enable CrowdSec integration" Checkbox entfernt (doppelt mit Ban Target Toggle)
+- CrowdSec Ban-Dauer-Verdopplung behoben
+
+## 1.24.3 – 2026-04-02
+
+### Fixed
+- `events_count` Pflichtfeld im CrowdSec Alert-Payload ergänzt
+
+## 1.24.2 – 2026-04-02
+
+### Added
+- Manuelle Bans und Unbans werden an CrowdSec synchronisiert
+- CrowdSec-Ergebnis wird im UI-Toast angezeigt
+
+## 1.24.0 – 2026-04-01
+
+### Changed
+- **CrowdSec HTTP-Client**: aiohttp durch `urllib.request` (stdlib) ersetzt — behebt persistente 401-Fehler
+
+## 1.23.0 – 2026-03-31
+
+### Added
+- **CrowdSec LAPI Integration**: Bans werden als Decisions an CrowdSec gesendet
+- Machine-Watcher-Authentifizierung mit JWT-Token und automatischer Erneuerung
+- Test Connection Button im Settings-Tab
+- SHA256-Erkennung: gespeicherte Hashes werden automatisch als ungültig erkannt
+
+## 1.22.4 – 2026-03-31
+
+### Fixed
+- Addon Delete/Remove Button repariert
+
+### Removed
+- Erste CrowdSec-Implementierung (via docker exec) entfernt zugunsten der LAPI-Integration
+
+## 1.22.0 – 1.22.3 – 2026-03-31
+
+### Added
+- Erster CrowdSec-Integrationsversuch via Docker Socket / cscli
+
+## 1.21.0 – 1.21.9 – 2026-03-30
+
+### Added
+- **nftables-Support** für Firewall-Blocking auf HassOS
+- Rule-Spalte im Dashboard
+- Domain-Chips in der UI
+- Source-Delete-Button
+- Details-Gruppierung nach Source
+
+### Fixed
+- Firewall-Erkennung auf HassOS (iptables → nftables Fallback)
+- ip_bans.yaml als ausreichender Mechanismus akzeptiert
+
+## 1.20.0 – 1.20.4 – 2026-03-30
+
+### Added
+- Loading-Spinner und Auto-Refresh im Dashboard
+- Per-File Details-Ansicht
+- Regex-Generator für neue Regeln
+
+### Fixed
+- False Bans durch alte Docker-Logs beim ersten Poll
+- Spinner-Bug bei langen Ladezeiten
+- iptables in Container installiert (fehlte im Alpine-Image)
+
+## 1.19.0 – 2026-03-30
+
+### Added
+- **Protected Mode** Toggle für zusätzlichen Schutz
+- Firewall-Status in der UI
+
+## 1.18.0 – 1.18.9 – 2026-03-29
+
+### Added
+- **Health Check**: prüft ob Log-Quellen aktive Einträge haben (letzte 7 Tage)
+- **My-IP Protection**: eigene IP wird serverseitig gespeichert und dynamisch aktualisiert
+- Konfigurierbare Scan-Intervalle
+- Reassign-Modal für Source-Zuordnung
+- host_network für iptables-Zugriff
+- Whitelisted Events als SKIPPED anzeigen
+
+### Fixed
+- Docker Log Polling: Content-basierte Deduplizierung statt Längen-Tracking
+- Ban-Counter-Reset durch historische Log-Timestamps
+- Events-Deduplizierung
+
+## 1.17.0 – 1.17.2 – 2026-03-29
+
+### Added
+- **Custom File Sources**: eigene Log-Dateien hinzufügen
+- Ungrouped Sources im Addons-Tab
+
+### Fixed
+- Custom-File-Sources: eigene Zeile pro Datei, Persist durch Discover
+- File Search für absolute Pfade
+
+## 1.16.0 – 1.16.8 – 2026-03-28
+
+### Added
+- **Rules-Editor**: Regeln bearbeiten, hinzufügen, kopieren, löschen
+- Ban-Evidence (welche Log-Zeilen den Ban ausgelöst haben)
+- Per-Event Alerts
+- File Search im Debug-Tab
+- Auto-Whitelist der eigenen IP beim Seitenaufruf
+- Webtrees-, DokuWiki-, NPM-Erkennungsregeln
+- Zeitfenster-Filterung für Log-Zeilen
+
+### Changed
+- Alerts in Dashboard integriert
+- Debug-Tab entfernt, Log-Verbosity reduziert
+
+### Fixed
+- Preview-Modal außerhalb Rules-Tab
+- Timezone-aware Log-Filterung
+- Supervisor-Log-Spam reduziert
+
+## 1.15.0 – 2026-03-28
+
+### Added
+- Webtrees Failed-Login-Erkennung
+
+## 1.14.0 – 2026-03-28
+
+### Added
+- DokuWiki auth.log Erkennung
+
+## 1.13.0 – 2026-03-28
+
+### Added
+- Nginx Proxy Manager Log-Pattern
+
+## 1.12.0 – 2026-03-28
+
+### Added
+- Log-Zeilen außerhalb des Monitoring-Fensters werden gefiltert
+
+## 1.10.0 – 2026-03-28
+
+### Fixed
+- Supervisor API Zugriff (hassio_role: admin)
+- Zeitbasiertes Log-Lesen
+
+## 1.9.0 – 2026-03-28
+
+### Fixed
+- Docker Addon Sources aktivieren sich nicht
+- HA Core Log Polling hinzugefügt
+
+## 1.8.0 – 2026-03-28
+
+### Added
+- Auto-Whitelist für HA-interne IPs
+- Port 8098
+
+### Fixed
+- Source Auto-Enable
+
+## 1.7.0 – 1.7.3 – 2026-03-28
+
+### Added
+- Addon-Level Monitoring
+- HTTP Login Failure Detection
+- Auto-Enable neuer Log-Sources für aktive Addons
+
+### Fixed
+- Whitelist CIDR-Löschung
+- Scan bei Startup
+
+## 1.5.0 – 2026-03-28
+
+### Added
+- Laravel/2FAuth Patterns
+
+### Fixed
+- Deduplizierung, Stale Source Cleanup
+
+## 1.4.0 – 2026-03-28
+
+### Added
+- Log Preview
+- Debug-Tab für Unmatched Auth Lines
+
+## 1.3.0 – 2026-03-28
+
+### Added
+- Smart Log Discovery (nur aktuelle Dateien, Addon-Name-Mapping)
+
+## 1.2.0 – 2026-03-28
+
+### Added
+- Persistente Einstellungen
+- Deep Log Discovery
+- Weitere Erkennungsmuster
+
+## 1.1.0 – 2026-03-28
+
+### Added
+- Multi-Source Log Scanning
+- Alerts
+- Addon Log Support
+
+## 1.0.0 – 2026-03-28
+
+### Added
+- Initial Release
+- Automatische Brute-Force-Erkennung aus Home-Assistant-Logs
+- IP-Banning via `ip_bans.yaml`
+- Konfigurierbare Schwellwerte
+- Web-UI mit Dashboard, Blocked IPs, Whitelist und Settings
+- Manuelles Ban/Unban
+- Whitelist für IPs und CIDR-Bereiche
+- Automatisches Ban-Ablauf
+- HA Ingress Support

@@ -1,0 +1,1 @@
+{"name": "Cloudflare Route Manager", "description": "Manage Cloudflare DNS records and tunnel routes from Home Assistant; adds Cloudflare IPs to trusted_proxies automatically", "version": "1.0.6", "arch": ["aarch64", "amd64", "armv7"]}

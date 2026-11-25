@@ -1,0 +1,40 @@
+name: "LibrePhotos"
+description: "Self-hosted photo management with AI face recognition and automatic classification"
+version: "0.14"
+image: ghcr.io/gregorwolf1973/{arch}-addon-librephotos
+url: "https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon"
+slug: "librephotos"
+init: false
+arch:
+  - amd64
+  - aarch64
+startup: services
+boot: auto
+ingress: false
+panel_icon: "mdi:image-multiple"
+panel_title: "LibrePhotos"
+webui: "http://[HOST]:[PORT:8001]"
+host_network: false
+apparmor: false
+options:
+  db_password: "LibrePhotos1234"
+  workers: 2
+  log_level: "info"
+  admin_username: "admin"
+  admin_password: "admin"
+  admin_email: "admin@example.com"
+schema:
+  db_password: str
+  workers: int(1,8)
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  admin_username: str
+  admin_password: password
+  admin_email: email
+map:
+  - media:rw
+  - config:rw
+  - share:rw
+ports:
+  8001/tcp: 8001
+ports_description:
+  8001/tcp: "LibrePhotos web interface"

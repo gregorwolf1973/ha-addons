@@ -1,0 +1,1 @@
+{"name": "HA Guardian", "description": "Brute-force protection for Home Assistant – monitors logs and auto-bans attacking IPs via ip_bans.yaml (application layer) with optional network-level blocking", "version": "1.30.1", "arch": ["amd64", "aarch64", "armv7", "armhf", "i386"]}

@@ -1,0 +1,1 @@
+{"name": "CrowdSec Cloudflare Bouncer", "description": "Enforces CrowdSec decisions at Cloudflare (Workers + KV) - blocks attackers at the Cloudflare edge, even behind a tunnel", "version": "0.1.5", "arch": ["aarch64", "amd64", "armv7"]}

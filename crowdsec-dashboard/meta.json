@@ -1,0 +1,1 @@
+{"name": "CrowdSec Dashboard", "description": "Web UI to view and manage CrowdSec bans and alerts", "version": "1.4.4", "arch": ["aarch64", "amd64", "armv7"]}

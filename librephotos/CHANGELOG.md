@@ -1,0 +1,124 @@
+# Changelog
+
+## 0.14
+- Prebuilt images from GitHub Container Registry: installs and updates no
+  longer build locally.
+
+## 0.13 (2026-11-15)
+
+### LibrePhotos 1.6.0
+- The base image is now pinned to `librephotos-unified:1.6.0` instead of
+  `:latest`. With `:latest`, Home Assistant never noticed new LibrePhotos
+  releases and kept the old build. 1.6.0 brings the redesigned web app and
+  fixes security problems in sharing and user management – see the
+  [release notes](https://github.com/LibrePhotos/librephotos/releases/tag/1.6.0)
+
+### Automatic PostgreSQL upgrade
+- Since LibrePhotos 1.2 the base image is Ubuntu 26.04 with PostgreSQL 18.
+  Installations built earlier have a PostgreSQL 16 database, which
+  PostgreSQL 18 cannot open
+- PostgreSQL now comes from the official repository (apt.postgresql.org)
+  with a fixed major version (18), so it no longer changes with the base image
+- On the first start, an older database is upgraded with `pg_upgrade`. The
+  original stays untouched in `/config/librephotos/postgres-16.bak`; delete
+  it once everything works
+
+## 0.12 (2026-09-14)
+
+### `log_level` is now actually used
+- `run.sh` sets the bashio log level from the option and maps it to the
+  backend's `LOG_LEVEL` (`trace`/`debug` → `DEBUG`, `info`/`notice` → `INFO`,
+  `warning` → `WARNING`, `error` → `ERROR`, `fatal` → `CRITICAL`), which
+  `supervisord.conf` passes to the LibrePhotos process
+- Start-up banner no longer hard-codes the old version `v0.10`
+
+### Documentation
+- Sidebar integration no longer uses the removed `panel_iframe:` YAML
+  integration – documented via a dashboard with a **Webpage** card instead
+  (the add-on runs without Ingress, so it has no "Show in sidebar" toggle)
+- Scan-folder menu path is now consistent everywhere: **user menu (avatar,
+  top right) → Library** (matches the upstream LibrePhotos documentation)
+- Root README no longer claims a bundled Redis – the container runs
+  PostgreSQL plus the LibrePhotos backend/frontend; background jobs use
+  Django-Q with the database as broker
+- "Buy Me A Coffee" button moved to the top of `DOCS.md`
+
+## 0.11 (2026-05-15)
+
+### Add-on logo and icon
+- Added `icon.png` (square) and `logo.png` (with text) – sourced from the
+  official LibrePhotos frontend repo so the add-on tile shows the proper
+  branding in the HA Add-on Store and sidebar
+
+## 0.10 (2026-05-15)
+
+### Documentation translated to English
+- All README / DOCS / changelog content is now in English
+- Added "Buy Me A Coffee" support button to top-level and add-on README
+- Added GitHub topics on the repository for discoverability
+
+## 0.09 (2026-05-06)
+
+### MAP_API_PROVIDER pinned to nominatim
+- `MAP_API_PROVIDER=nominatim` set explicitly as an env var in `supervisord.conf`
+- Prevents the `production.py` fallback (`"photon"`) from kicking in when the
+  Constance migration 0093 has not run
+- Photon's public API has been unreliable for a long time (502s); Nominatim is
+  also the new default upstream
+
+## 0.08 (2026-05-06)
+
+### `scan_directory` removed – photo sources are auto-detected
+- The `scan_directory` option is gone. Nothing to configure any more.
+- `/media` and `/share` are auto-linked under `/data/media` and `/data/share`
+- In the LibrePhotos UI the user picks the path directly under Library
+  (e.g. `/data/media/photoprism/originals`)
+
+## 0.07 (2026-05-05)
+
+### Ingress removed, "OPEN WEB UI" button instead
+- `ingress: false` because the LibrePhotos SPA has hard-coded API paths
+  incompatible with the HA Ingress URL prefix (white screen)
+- `webui:` property exposes an "OPEN WEB UI" button on the add-on tab linking
+  directly to `http://homeassistant.local:8001`
+- Optional: users can wire a `panel_iframe` entry in `configuration.yaml` to
+  put LibrePhotos in the HA sidebar
+
+## 0.06 (2026-05-05)
+
+### Persistence (Breaking Change)
+- **All persistent data now lives under `/config/librephotos/`**:
+  - `postgres/` – PostgreSQL data directory
+  - `protected_media/` – thumbnails, faces, ML models
+  - `cache/` – model downloads (HuggingFace, pip)
+  - `logs/`
+  - `secret_key` – stable Django SECRET_KEY
+- Updates and add-on rebuilds **no longer** wipe DB & caches
+- HA snapshots automatically back up all LibrePhotos data with `/config`
+- **Migration**: existing users start fresh on update (DB in the old container is lost)
+
+## 0.05 (2026-05-05)
+- Multi-path access via symlinks under /data (media + share)
+- Auto-creation of the scan folder
+
+## 0.04 (2026-05-05)
+- X_FRAME_OPTIONS patch for HA Ingress (used to show a white screen)
+
+## 0.03 (2026-05-05)
+- PostgreSQL crash loop fixed (dynamic version detection)
+- pg_isready wait logic added
+
+## 0.02 (2026-05-04)
+- Refactor onto the official librephotos-unified image
+
+## 0.01 (2026-05-04)
+
+### Initial Release
+- LibrePhotos backend (Django) integration
+- LibrePhotos frontend (React) integration
+- PostgreSQL database (bundled)
+- Redis cache (bundled)
+- Nginx reverse proxy
+- Home Assistant Ingress support
+- Configurable worker count
+- Automatic database initialisation

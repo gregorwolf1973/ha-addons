@@ -1,0 +1,1 @@
+{"name": "German TV Panel", "description": "Free German TV channels (ARD, ZDF, Arte, ...) as a sidebar panel in Home Assistant.", "version": "1.0.7", "arch": ["aarch64", "amd64", "armv7"]}

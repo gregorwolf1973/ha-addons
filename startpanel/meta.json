@@ -1,0 +1,1 @@
+{"name": "Startpanel", "description": "Dashboard showing all Home Assistant addons with icons and quick access links", "version": "0.36", "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"]}

@@ -1,0 +1,103 @@
+configuration:
+  scan_paths:
+    name: Scan Paths
+    description: List of paths to scan (e.g. /share, /media). Maps to Home Assistant share and media folders.
+  scan_schedule:
+    name: Scan Schedule
+    description: How often to run an automatic scan. Use 'disabled' to turn off automatic scans.
+  scan_hour:
+    name: Scan Hour
+    description: Hour of the day (0-23) at which the scheduled scan starts (for daily/weekly schedule).
+  daemon_mode:
+    name: Daemon Mode (RAM vs. Speed Trade-off)
+    description: >-
+      'always' = ClamAV daemon stays running and keeps the ~1 GB signature
+      database permanently in RAM. Scans start instantly. Best when you have
+      enough RAM (>= 2 GB free) or run many scans.
+      'on_demand' = No daemon. Each scan loads the database fresh from disk
+      and releases the RAM afterwards. Idle RAM is ~50 MB instead of ~1 GB,
+      but every scan has 30-60 seconds extra startup time (depending on disk
+      speed; SD-card is slow, SSD is fast). Best for low-RAM hardware (e.g.
+      Raspberry Pi) when you only scan once a day.
+  scan_archives:
+    name: Scan Inside Archives
+    description: >-
+      When ON, ClamAV unpacks and scans the contents of archives (ZIP, TAR,
+      RAR, 7z, PDF, Office documents, HTML). Most accurate but very slow
+      on media libraries. When OFF, only the outer files are scanned — this
+      gives 5–20× speedup for libraries dominated by media/archive files
+      and is usually safe for personal media. Recommended OFF for /media,
+      ON for /share if it contains documents.
+  skip_images:
+    name: Skip Image Files
+    description: >-
+      When ON, common image formats (jpg, jpeg, png, gif, webp, heic, tiff,
+      bmp, raw, cr2, nef, arw, dng, svg) are skipped. Image files rarely
+      contain malware that ClamAV can detect, and skipping them gives a
+      big speedup on photo libraries. Case-insensitive (.JPG and .jpg both
+      match).
+  skip_videos:
+    name: Skip Video Files
+    description: >-
+      When ON, common video formats (mp4, mkv, mov, avi, m4v, webm, wmv,
+      flv, 3gp, mts, m2ts, mpeg, mpg) are skipped. Videos are large and
+      rarely contain malware — skipping them gives the biggest speedup
+      on media libraries. Case-insensitive.
+  skip_audio:
+    name: Skip Audio Files
+    description: >-
+      When ON, common audio formats (mp3, flac, wav, m4a, ogg, aac, opus,
+      wma, aiff) are skipped. Audio files rarely contain malware. Case-
+      insensitive.
+  exclude_patterns:
+    name: Custom Exclude Patterns (regex)
+    description: >-
+      Additional regex patterns matched against full file paths. Files and
+      directories matching any pattern are skipped — in addition to the
+      Skip Images/Videos/Audio toggles above. Examples - "\.mkv$" skips
+      all .mkv files; "/cache/" skips any directory called cache. In the
+      HA UI form, type a single backslash (\.mkv$); both single and double
+      backslash variants are accepted since v1.0.9.
+  incremental_scan:
+    name: Incremental Scan
+    description: >-
+      When ON, only files modified since the previous scan are scanned.
+      First scan is always a full scan. Subsequent scans skip unchanged
+      files entirely. Huge speedup for scheduled daily scans on stable
+      libraries (typical - 100x faster after the first run). Trade-off -
+      a file that's already infected but unchanged since the last scan
+      won't be re-scanned even if new virus signatures would detect it
+      now. Run a full scan (turn this OFF) periodically (e.g. monthly).
+  auto_quarantine:
+    name: Auto-Quarantine Infected Files
+    description: Automatically move infected files to the quarantine folder inside /data/quarantine.
+  max_file_size_mb:
+    name: Max File Size (MB)
+    description: Maximum file size in megabytes to scan. Files larger than this are skipped.
+  notify_ha:
+    name: Notify Home Assistant
+    description: Send a persistent notification to Home Assistant when a scan completes or a threat is detected.
+  log_level:
+    name: Log Level
+    description: >-
+      Verbosity of the addon logs (startup script, web GUI, scheduler and
+      scanner). 'debug' and 'trace' additionally enable verbose logging for
+      clamd and freshclam. From 'warning' upwards the web interface's
+      per-request access lines are suppressed too. Requires an addon
+      restart to take effect.
+  web_port:
+    name: Web GUI Port
+    description: >-
+      Port the web interface listens on inside the container (default 8200).
+      Do NOT change it - the Home Assistant panel (ingress) is fixed to port
+      8200, and the port is not published to the host either, so any other
+      value makes the web interface unreachable.
+  admin_password_enabled:
+    name: Enable Admin Password Protection
+    description: Protects the web interface with a username and password.
+  admin_username:
+    name: Admin Username
+    description: Username for the web interface (default admin).
+  admin_password:
+    name: Admin Password
+    description: Password for the web interface. Only active when admin_password_enabled is true.

@@ -1,0 +1,45 @@
+name: "FritzBox & HA Metrics Exporter"
+description: "Pushes FritzBox (TR-064) and Home Assistant metrics to InfluxDB 1.x"
+version: "0.3.3"
+image: ghcr.io/gregorwolf1973/{arch}-addon-fritzbox_metrics
+url: "https://github.com/gregorwolf1973/fritz-network-addon"
+slug: "fritzbox_metrics"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armv7
+startup: application
+boot: auto
+host_network: true
+hassio_api: true
+hassio_role: manager
+homeassistant_api: true
+options:
+  fritzbox_host: "192.168.178.1"
+  fritzbox_port: 49000
+  fritzbox_user: ""
+  fritzbox_password: ""
+  influxdb_host: "a0d7b954-influxdb"
+  influxdb_port: 8086
+  influxdb_database: "metrics"
+  influxdb_username: ""
+  influxdb_password: ""
+  scrape_interval: 15
+  enable_fritzbox: true
+  enable_homeassistant: true
+  log_level: "info"
+schema:
+  fritzbox_host: str
+  fritzbox_port: port
+  fritzbox_user: str
+  fritzbox_password: str
+  influxdb_host: str
+  influxdb_port: port
+  influxdb_database: str
+  influxdb_username: str
+  influxdb_password: str
+  scrape_interval: int(5,3600)
+  enable_fritzbox: bool
+  enable_homeassistant: bool
+  log_level: list(debug|info|warning|error)

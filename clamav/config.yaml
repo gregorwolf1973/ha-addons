@@ -1,0 +1,72 @@
+name: "ClamAV Antivirus"
+description: "ClamAV-based antivirus scanner for Home Assistant with web GUI, scheduled scans, quarantine and HA notifications"
+version: "1.0.14"
+image: ghcr.io/gregorwolf1973/{arch}-addon-clamav
+url: "https://github.com/gregorwolf1973/clamav-hassio-addon"
+slug: "clamav"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armv7
+startup: services
+boot: manual
+ingress: true
+ingress_port: 8200
+panel_icon: "mdi:shield-bug"
+panel_title: "ClamAV"
+host_network: false
+ports:
+  3310/tcp: 3310
+ports_description:
+  3310/tcp: "clamd (INSTREAM/SCAN) for other add-ons such as Simple NAS - disable if unused"
+privileged:
+  - DAC_READ_SEARCH
+apparmor: false
+options:
+  scan_paths:
+    - /share
+    - /media
+  scan_schedule: "daily"
+  scan_hour: 2
+  daemon_mode: "always"
+  scan_archives: true
+  skip_images: true
+  skip_videos: true
+  skip_audio: true
+  exclude_patterns: []
+  incremental_scan: false
+  auto_quarantine: true
+  max_file_size_mb: 100
+  notify_ha: true
+  log_level: "info"
+  web_port: 8200
+  admin_password_enabled: false
+  admin_username: "admin"
+  admin_password: ""
+schema:
+  scan_paths:
+    - str
+  scan_schedule: list(disabled|hourly|daily|weekly)
+  scan_hour: int(0,23)
+  daemon_mode: list(always|on_demand)
+  scan_archives: bool
+  skip_images: bool
+  skip_videos: bool
+  skip_audio: bool
+  exclude_patterns:
+    - str
+  incremental_scan: bool
+  auto_quarantine: bool
+  max_file_size_mb: int(1,2048)
+  notify_ha: bool
+  log_level: list(trace|debug|info|notice|warning|error|fatal)
+  web_port: port
+  admin_password_enabled: bool
+  admin_username: str
+  admin_password: str
+map:
+  - share:rw
+  - media:rw
+  - config:rw
+  - all_addon_configs:ro

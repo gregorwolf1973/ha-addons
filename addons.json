@@ -5,7 +5,7 @@
       "repo": "addon-startpanel",
       "path": "startpanel",
       "slug": "startpanel",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "chat-server-addon",
@@ -17,31 +17,31 @@
       "repo": "Chromium_light_browser",
       "path": "chromium_light_browser",
       "slug": "chromium_light_browser",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "clamav-hassio-addon",
       "path": "clamav",
       "slug": "clamav",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "cloudflare-routes-addon",
       "path": "cloudflare_routes",
       "slug": "cloudflare_routes",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "crowdsec-cloudflare-bouncer-addon",
       "path": "crowdsec_cloudflare_bouncer",
       "slug": "crowdsec_cloudflare_bouncer",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "crowdsec-dashboard-addon",
       "path": "crowdsec-dashboard",
       "slug": "crowdsec-dashboard",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "EasyNas-HASSIO-Addon",
@@ -53,19 +53,19 @@
       "repo": "fotoarchiv-addon",
       "path": "fotoarchiv",
       "slug": "fotoarchiv",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "fritz-network-addon",
       "path": "fritzbox_metrics",
       "slug": "fritzbox_metrics",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "fritz-network-addon",
       "path": "fritzbox_network",
       "slug": "fritzbox_network",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "guacamole-stable-addon",
@@ -77,13 +77,13 @@
       "repo": "ha-addon-german-tv",
       "path": "german_tv",
       "slug": "german_tv",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "ha-guardian",
       "path": "guardian",
       "slug": "guardian",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "hardware-monitor-addon",
@@ -95,19 +95,19 @@
       "repo": "Hassioadon_Dokuwiki",
       "path": "dokuwiki",
       "slug": "dokuwiki",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "Hassio_Heimdall",
       "path": "heimdal",
       "slug": "heimdal",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "LibrePhotos-HASSIO-Addon",
       "path": "librephotos",
       "slug": "librephotos",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "mailwaechter-addon",
@@ -119,25 +119,25 @@
       "repo": "onionshare-addon",
       "path": "onionshare",
       "slug": "onionshare",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "PictureView",
       "path": "picture_view",
       "slug": "picture_view",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "Racon-addon",
       "path": "recon",
       "slug": "recon",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "seafile-hassio-addon",
       "path": "seafile",
       "slug": "seafile",
-      "aktiv": false
+      "aktiv": true
     },
     {
       "repo": "snappymail-addon",
