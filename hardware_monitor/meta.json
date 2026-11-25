@@ -1,0 +1,1 @@
+{"name": "Hardware Monitor", "description": "Live overview of hardware resources: CPU, RAM, disks, network and top processes", "version": "2.7.1", "arch": ["aarch64", "amd64", "armv7"]}

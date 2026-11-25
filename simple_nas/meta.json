@@ -1,0 +1,1 @@
+{"name": "Simple NAS", "description": "Simple NAS with Samba shares and web GUI for drive management", "version": "3.23.2", "arch": ["aarch64", "amd64", "armv7"]}

@@ -1,0 +1,114 @@
+# Hardware Monitor
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)
+
+[Deutsch](DOCS.de.md) · **English**
+
+Live overview of CPU, RAM, disks, network, temperatures and processes — across
+**all** addons and the host system.
+
+## Installation
+
+1. Open the addon and click **Install**.
+2. Make sure **Protection Mode** is **OFF** (Info tab) — otherwise the
+   Supervisor blocks `host_pid` and the addon only sees its own processes.
+3. **Start** the addon and open it via the side panel (Ingress).
+
+## How to use
+
+- **Header cards**: CPU, RAM, swap, network, load average and temperatures at a
+  glance. CPU, RAM and network also draw a **sparkline** of the last
+  measurements.
+- **Disks**: One entry per physical device. Docker bind-mounts that point to
+  single files (`/etc/resolv.conf`, `/etc/hostname`, …) are filtered out.
+- **Processes**: Top 60 (by CPU) fetched from the host.
+  - **Sortable columns** — click a header to sort by PID, name, CPU %, RAM,
+    RAM % or swap; clicking the same header again reverses the direction. The
+    arrow in the header shows the current column and direction, and the choice
+    is remembered in the browser. Only *Status* is not sortable.
+  - **Search box** — filters by process name and command line as you type;
+    press `/` to jump into it.
+  - **Filter chips** — All / HA / Host / Docker
+  - **Grouped** — groups the processes by add-on / container instead of
+    listing them individually (a search overrides the grouping).
+  - **Refresh interval** — 2 s / 5 s / 10 s / 30 s / off (stored in browser)
+  - **CPU sample** — see the next section.
+  - **Badges** identify the source: `HA Core`, `hassio_dns`, addon slug,
+    docker container name, or host; a second badge shows the user the process
+    runs as. Click a command line to expand it.
+- **Pause** (the ⏸ button next to the refresh status) stops the auto-refresh;
+  the same happens automatically while the browser tab is in the background.
+- **Theme toggle** in the top-right switches between dark and light.
+- **Keyboard shortcuts** (outside of input fields and the swap dialog):
+  `/` focus the search box · `Space` pause / resume · `R` refresh now ·
+  `T` switch the theme.
+
+## CPU sample window
+
+The **CPU sample** selector (next to *Refresh*) controls how long psutil
+averages CPU usage for each measurement. Default is **3 s**.
+
+- **Short windows (100–500 ms)** catch instantaneous spikes. The number jumps
+  around a lot and is often higher than the "true" average, because the act
+  of polling itself (Flask + iterating ~200 `/proc/<pid>/*` entries) shows up
+  as load during the measurement.
+- **Long windows (2–3 s)** average over much more idle time and match what
+  other tools show — e.g. Home Assistant's built-in System Monitor (which
+  aggregates over 5 minutes) typically reports values close to a 3 s sample.
+
+If Hardware Monitor shows 10–15 % while another tool reports 3–5 %, the
+difference is mostly the observer effect (polling cost) plus shorter sample
+window. Switch to **3 s** to get a calmer reading; increase the **Refresh**
+interval to reduce the polling cost.
+
+## Swap settings
+
+On **Home Assistant OS 15+** the Swap card shows the configured size and
+swappiness. **Configure** opens a dialog (from the sidebar only, not via the
+direct port 8200):
+
+- **Recommendation** (marked green): about the size of RAM up to 4 GB, half of
+  RAM above that, at most 8 GB. With a lot of swap already in use it leaves
+  room for twice that; on SD cards / eMMC it stays at 2 GB. It never suggests
+  more than fits on the data partition, keeping 2 GB free.
+- **Swappiness**: Home Assistant OS uses 1 – swap only under real memory
+  pressure, the right setting for SSDs and flash.
+- A **new size only takes effect after a host restart**. The notice with
+  **Restart host…** stays until that happens. Swappiness applies at once.
+
+Swap bridges memory peaks but does not replace RAM: if it stays heavily used,
+the process list (*Swap* column, *Grouped* view) shows which add-on needs the
+memory.
+
+## Why are some processes missing?
+
+If you see a yellow diagnostic banner ("host_pid INACTIVE — container only sees
+itself"), the Supervisor's Protection Mode is blocking namespace sharing.
+Open the addon's **Info** tab and toggle **Protection Mode** off, then restart
+the addon.
+
+PID 1 should show as a host process (`init`, `systemd`, …) and the total
+process count should be in the hundreds, not single digits.
+
+## Permissions
+
+| Setting        | Value         | Reason                                                |
+| -------------- | ------------- | ----------------------------------------------------- |
+| `host_pid`     | `true`        | See processes outside the container                   |
+| `host_network` | `true`        | Read real host network counters                       |
+| `hassio_api`   | `true`        | Swap settings through the Supervisor API              |
+| `hassio_role`  | `manager`     | Required for the panel + extended Supervisor APIs     |
+| `privileged`   | `SYS_PTRACE`  | Read `/proc/<pid>/cgroup` and command lines           |
+| `apparmor`     | `false`       | Allow access to `/proc/<pid>/root/etc/hostname`       |
+
+`full_access` is **not** used — it conflicts with `host_pid` and stops the
+container from starting.
+
+## Troubleshooting
+
+| Symptom                                                | Fix                                            |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| Only ~8 processes visible                              | Turn off Protection Mode, restart the addon    |
+| Addon does not start, log says "can only run as pid 1" | Already fixed in v1.07+ (bypasses s6-overlay)  |
+| Same `/dev/sdaX` listed multiple times                 | Already fixed in v1.09+                        |
+| Version 1.10 not detected as update                    | Upgrade to v2.0.0+ (proper semver)             |

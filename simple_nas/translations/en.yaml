@@ -1,0 +1,148 @@
+configuration:
+  workgroup:
+    name: Workgroup
+    description: Windows workgroup name (default WORKGROUP)
+  nas_name:
+    name: NAS Name
+    description: NetBIOS / mDNS hostname shown in network browsers (default SimpleNAS)
+  log_level:
+    name: Log Level
+    description: Samba log verbosity
+  web_port:
+    name: Web GUI Port
+    description: Port for direct access to the web interface via http://YOUR-HA-IP:PORT (default 8100). The 'Open' button in Home Assistant has its own port and works regardless.
+  admin_password_enabled:
+    name: Enable Admin Password Protection
+    description: Protects the web interface with a username and password. Also requires setting admin_username and admin_password.
+  admin_username:
+    name: Admin Username
+    description: Username for accessing the web interface (default admin). Only active when admin_password_enabled is true.
+  admin_password:
+    name: Admin Password
+    description: Password for accessing the web interface. Stored only as a hash. Only active when admin_password_enabled is true.
+  admin_ingress_only:
+    name: Admin interface only through Home Assistant
+    description: "When on, the admin interface only answers through the Open button in Home Assistant (Ingress). Direct access via http://HA-IP:8100 and via Nginx Proxy Manager / Cloudflare is refused. Leave off if you reach the admin interface through your own domain."
+  smb_port:
+    name: SMB Port
+    description: SMB port (default 445). Change to e.g. 4445 if the official Samba add-on is also running.
+  mdns_enabled:
+    name: mDNS / Bonjour (Avahi)
+    description: "Announce the NAS via mDNS/Bonjour (macOS Finder, Linux file managers, Time Machine) and make it reachable as NASNAME.local. Turn it off if another app with host network also runs Avahi: only one Avahi can work per host, the second one loops with \"Host name conflict\". Windows discovery (WSDD) keeps working."
+  webdav_enabled:
+    name: WebDAV
+    description: "Also offer the shares over WebDAV (http://YOUR-HA-IP:webdav_port/), e.g. for phone apps, Windows, macOS and access on the go. Log in with the Samba users; same permissions as Samba. For the internet, publish it only through a reverse proxy with HTTPS."
+  webdav_port:
+    name: WebDAV port
+    description: Port for WebDAV (default 8102).
+  ftp_enabled:
+    name: FTP
+    description: "Also offer the shares over FTP (ftp://YOUR-HA-IP/) for devices that only speak FTP, e.g. IP cameras and scanners. Log in with the Samba users; same permissions as Samba. Unencrypted – home network only, never forward the port in your router."
+  ftp_port:
+    name: FTP port
+    description: Port for FTP (default 21). If another FTP add-on still uses port 21, stop it first or pick another port here.
+  ftp_passive_ports:
+    name: FTP passive ports
+    description: Port range for passive FTP (default 30000-30010).
+  web_gui_enabled:
+    name: Enable Web GUI
+    description: Set to false to run Samba only, without the web interface (smaller attack surface).
+  hdd_idle_seconds:
+    name: HDD Spindown (seconds)
+    description: Spin down mounted drives after this many seconds of inactivity to save power and reduce noise/wear (0 = disabled). Uses I/O-based hd-idle, suitable for USB drives. Only affects drives you mounted in Simple NAS, never the HA system disk. Note - any process touching the share (Samba client, SMART polling, backup jobs) resets the timer.
+  trim_interval_days:
+    name: Automatic SSD TRIM (days)
+    description: Run TRIM on mounted drives every this many days (0 = off, 30 = monthly). Only drives that report TRIM support are included.
+  trim_usb_unmap:
+    name: Enable TRIM on USB adapters
+    description: Many USB enclosures (e.g. with Realtek RTL9210 or ASMedia chips) support TRIM, but Linux does not enable it. With this option, Simple NAS turns TRIM on before each TRIM run for USB drives that report UNMAP support. Use at your own risk - a few adapters report TRIM but handle it incorrectly. Make a backup first. The system disk is never touched.
+  file_allowed_roots:
+    name: Allowed folders
+    description: Directories the file manager may open. Anything outside is refused. Only change this if you need to manage files outside the default folders.
+  sharing_enabled:
+    name: Enable web sharing
+    description: Starts the public sharing site on its own port. Requires an admin password to be set.
+  share_port:
+    name: Sharing site port
+    description: Port the public sharing site listens on (default 8101). Publish this port through Nginx Proxy Manager with a domain and TLS.
+  share_bind:
+    name: Sharing site listens on
+    description: 0.0.0.0 = reachable on the network (required when Nginx Proxy Manager runs as an add-on - it cannot reach the host loopback). 127.0.0.1 = only for a reverse proxy running directly on the host.
+  share_public_url:
+    name: Public address
+    description: The address the sharing site is reachable at from outside, e.g. https://files.example.com. Used in the generated links.
+  share_allowed_roots:
+    name: Folders allowed for sharing
+    description: Only folders below these directories can be shared via link. /config and /data are always excluded.
+  share_trusted_proxies:
+    name: Trusted proxies
+    description: "X-Forwarded-For/-Proto are only honoured from these addresses. Default: localhost and the Supervisor network (where Nginx Proxy Manager runs as an add-on)."
+  share_cookie_secure:
+    name: Share cookie over HTTPS only
+    description: Keep on when the site is published over HTTPS (the normal case). Only switch off for testing over http://.
+  share_session_hours:
+    name: Share site session length (hours)
+    description: How long a login to a link stays valid.
+  share_sandbox:
+    name: Sandbox the sharing site
+    description: "auto (recommended): the public site runs as its own non-root process that cannot see /config, /ssl, other add-ons or backups. on: require it, or the site stays down. off: in the main process, as before."
+  share_log_max_mb:
+    name: Access log size (MB)
+    description: The log rotates at this size; one older copy is kept.
+  share_zip_max_gb:
+    name: "ZIP download: maximum size (GB)"
+    description: "Folders above this size are not offered as ZIP. Applies to the share site and the file manager."
+  share_zip_max_files:
+    name: "ZIP download: maximum file count"
+    description: "Folders with more files are not offered as ZIP."
+  share_zip_compress:
+    name: "Compress ZIPs"
+    description: "Off = store only (fast; photos and videos do not shrink anyway). On = deflate, noticeably CPU-heavy on small boards."
+  share_max_upload_mb:
+    name: "Upload: maximum file size (MB)"
+    description: "Largest single file that may be uploaded through a link. Uploads are buffered on the data partition before processing - keep enough free space."
+  share_upload_blocked_ext:
+    name: "Upload: blocked file extensions"
+    description: "These extensions are rejected, also in the middle of a name (x.html.txt). Executables, and HTML/SVG that would be served from your own server."
+  share_upload_allowed_ext:
+    name: "Upload: allowed file extensions (optional)"
+    description: "If set, only these extensions are accepted, e.g. jpg, png, pdf. Empty = everything except the blocked ones."
+  share_clamav_enabled:
+    name: "Virus scan on upload"
+    description: "Uploaded files are handed to the ClamAV add-on (clamd) and rejected on a hit. The Sharing tab has a test button."
+  share_clamav_host:
+    name: "clamd address"
+    description: "Address of clamd. The ClamAV add-on on the host network is reachable at 127.0.0.1."
+  share_clamav_port:
+    name: "clamd port"
+    description: "TCP port of clamd (default 3310). The TCP socket must be enabled in the ClamAV add-on."
+  share_clamav_timeout:
+    name: "Virus scan: time limit (seconds)"
+    description: "Longest wait for a result per file."
+  share_clamav_on_error:
+    name: "Virus scanner unreachable"
+    description: "reject = refuse the upload when clamd does not answer (recommended). accept = accept anyway and note it in the log."
+  share_clamav_large_file:
+    name: "File too large to scan"
+    description: "clamd scans streams only up to its StreamMaxLength (25 MB by default); path mode is tried next. If that fails too: accept or reject."
+  share_log_export_path:
+    name: "Also export the access log to"
+    description: "Second copy of the access log somewhere the CrowdSec add-on can read, e.g. /config/.simplenas/share_access.log. Empty = the default path the 'Set up CrowdSec' button uses. Note: /share is not mapped into the CrowdSec add-on, so a log kept there stays invisible to it. Then click 'Set up CrowdSec' in the Sharing tab."
+  collabora_enabled:
+    name: "Integrate Collabora Online"
+    description: "Open office files (docx, xlsx, odt, ...) on the share site in the browser and - on links with 'Allow editing' - edit them. Needs a running Collabora server."
+  collabora_url:
+    name: "Collabora: public address"
+    description: "Address the browser uses to reach Collabora, e.g. https://collabora.example.com."
+  collabora_internal_url:
+    name: "Collabora: internal address (optional)"
+    description: "Only for Simple NAS fetching the supported file types, e.g. https://homeassistant:9980, when the public address is not reachable from the server (Cloudflare challenge). Empty = public address."
+  collabora_wopi_url:
+    name: "Address Collabora uses to reach Simple NAS (optional)"
+    description: "Empty = the share site's public address. Only set it when Collabora cannot reach the public address, e.g. http://homeassistant:8101 - that host must then be allowed as a WOPI host in Collabora."
+  collabora_verify_tls:
+    name: "Collabora: verify TLS certificate"
+    description: "Leave on. Only switch off when the internal address presents a certificate for a different name."
+  collabora_verify_proof:
+    name: "Collabora: verify call signatures"
+    description: "Leave on: only the configured Collabora server may read and save files through the editor interface. Switch off for troubleshooting only."

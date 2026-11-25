@@ -1,0 +1,577 @@
+# Simple NAS – Documentation
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/gregorwolf1973) [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/Gregor_Wolf/donate)
+
+A full-featured NAS add-on for Home Assistant with Samba file sharing, a web-based management GUI, USB/external drive support, and reinstall-safe settings backup.
+
+---
+
+## Features
+
+- **Samba file sharing** – SMB2/SMB3, compatible with Windows, macOS, Linux
+- **Web GUI** – manage shares, users, groups, drives, and file browser via HA Ingress
+- **USB / external drives** – mount and unmount drives at runtime; mounts survive reboots using stable `/dev/disk/by-id/` identifiers
+- **Network discovery** – mDNS (Avahi) for macOS Finder / Linux Nautilus, WS-Discovery (wsdd) for Windows 10/11
+- **Time Machine** – any share can be a backup target for Macs, found automatically via Bonjour
+- **WebDAV** – the shares over HTTP(S) for phone apps, Windows, macOS and access on the go, with the Samba users
+- **FTP** – the shares for devices that only speak FTP, such as IP cameras and scanners, with the Samba users
+- **External backups** – back up `/share`, `/media` or any folder to a Hetzner Storage Box, S3, Backblaze B2, SFTP, WebDAV, SMB, a second disk or any rclone provider; with restic (encrypted, versioned) or rclone (files 1:1), on a schedule, with restore in the browser
+- **Reinstall-safe backup** – settings are automatically backed up to `/config/.simplenas/auto` and restored on fresh install; manual snapshots (up to 10) are also supported
+- **Password protection** – optional web GUI login (username + password via add-on config)
+- **macOS junk suppression** – `.DS_Store`, `._*`, `.TemporaryItems` etc. are hidden and deleted automatically on all shares
+- **Language** – German / English toggle in the UI
+
+---
+
+## Installation
+
+1. Add this repository to Home Assistant: **Settings → Apps → Install app → ⋮ → Repositories**
+   ```
+   https://github.com/gregorwolf1973/EasyNas-HASSIO-Addon
+   ```
+2. Install **Simple NAS**.
+3. Configure the add-on options (see below).
+4. Start the add-on and open the web UI via **Ingress** or directly on the configured port.
+
+---
+
+## Configuration
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `workgroup` | string | `WORKGROUP` | Samba workgroup name |
+| `nas_name` | string | `SimpleNAS` | NetBIOS / mDNS hostname shown in network browsers |
+| `web_port` | port | `8100` | Port for direct access to the web GUI; the **Open** button in Home Assistant has its own port |
+| `smb_port` | port | `445` | SMB port. Change to e.g. `4445` if the official Samba add-on is also running |
+| `mdns_enabled` | bool | `true` | Announce the NAS via mDNS/Bonjour (Avahi) and as `NASNAME.local`. Turn off if another app with host network runs its own Avahi. See [Network discovery](#network-discovery) |
+| `log_level` | list | `info` | Log level: `trace` / `debug` / `info` / `notice` / `warning` / `error` / `fatal` |
+| `admin_password_enabled` | bool | `false` | Enable web GUI password protection |
+| `admin_username` | string | `admin` | Web GUI username |
+| `admin_password` | string | _(empty)_ | Web GUI password |
+| `web_gui_enabled` | bool | `true` | Set to `false` to run Samba only, without the web interface |
+| `webdav_enabled` | bool | `false` | Also offer the shares over WebDAV. See "WebDAV" below |
+| `webdav_port` | port | `8102` | Port for WebDAV |
+| `ftp_enabled` | bool | `false` | Also offer the shares over FTP. See "FTP" below |
+| `ftp_port` | port | `21` | Port for FTP |
+| `ftp_passive_ports` | string | `30000-30010` | Port range for passive FTP |
+| `hdd_idle_seconds` | int | `0` | Spin down mounted drives after this many seconds of inactivity (0 = disabled). See "Drive spindown / power saving" below |
+| `trim_interval_days` | int | `0` | Run TRIM on mounted drives every this many days, `0` = off (e.g. `30` for monthly). See [SSD TRIM](#ssd-trim). |
+| `trim_usb_unmap` | bool | `false` | Turn TRIM on for USB adapters that report UNMAP support but are left without TRIM by Linux. At your own risk. See [SSD TRIM](#ssd-trim). |
+| `file_allowed_roots` | list | `/media`, `/mnt`, `/share`, `/config`, `/addon_configs` | Directories the file manager may open |
+| `sharing_enabled` | bool | `false` | Start the public sharing site on its own port (requires an admin password). See "Sharing files on the internet" below |
+| `share_port` | port | `8101` | Port of the public sharing site |
+| `share_bind` | list | `0.0.0.0` | `0.0.0.0` or `127.0.0.1` |
+| `share_public_url` | string | _(empty)_ | Public address of the sharing site, used in the generated links |
+| `share_allowed_roots` | list | `/media`, `/mnt`, `/share` | Only folders below these can be shared via link |
+| `share_trusted_proxies` | list | `127.0.0.1`, `::1`, `172.30.32.0/23` | `X-Forwarded-For`/`-Proto` are only honoured from these addresses |
+| `share_cookie_secure` | bool | `true` | Share-site cookie over HTTPS only |
+| `share_session_hours` | int | `8` | How long a login to a link stays valid (1–720) |
+| `share_log_max_mb` | int | `5` | Access log rotation size |
+| `share_sandbox` | list | `auto` | `auto` / `on` / `off`. See "The public site runs sandboxed" below |
+| `share_zip_max_gb` | int | `5` | Folders above this size are not offered as ZIP |
+| `share_zip_max_files` | int | `10000` | Folders with more files are not offered as ZIP |
+| `share_zip_compress` | bool | `false` | Deflate ZIP downloads instead of store only |
+| `share_max_upload_mb` | int | `1024` | Largest single file uploaded through a link |
+| `share_upload_blocked_ext` | list | executables, scripts, HTML, SVG, … | Rejected upload extensions |
+| `share_upload_allowed_ext` | list | _(empty)_ | If set, only these extensions are accepted |
+| `share_clamav_enabled` | bool | `false` | Virus scan uploads with the ClamAV add-on. See "Virus scanning" below |
+| `share_clamav_host` | string | `127.0.0.1` | clamd address |
+| `share_clamav_port` | port | `3310` | clamd TCP port |
+| `share_clamav_timeout` | int | `120` | Time limit per scan in seconds |
+| `share_clamav_on_error` | list | `reject` | `reject` / `accept` when clamd is unreachable |
+| `share_clamav_large_file` | list | `accept` | `reject` / `accept` when a file is too large to scan |
+| `share_log_export_path` | string | _(empty)_ | Second copy of the access log for CrowdSec. See "CrowdSec integration" below |
+| `collabora_enabled` | bool | `false` | Integrate Collabora Online. See "Editing office files with Collabora Online" below |
+| `collabora_url` | string | _(empty)_ | Public address of the Collabora server |
+| `collabora_internal_url` | string | _(empty)_ | Internal address used only to fetch the supported file types |
+| `collabora_wopi_url` | string | _(empty)_ | Address Collabora uses to reach Simple NAS (empty = `share_public_url`) |
+| `collabora_verify_tls` | bool | `true` | Verify the Collabora TLS certificate |
+| `collabora_verify_proof` | bool | `true` | Verify the proof-key signature of WOPI calls |
+
+---
+
+## Network discovery
+
+Simple NAS announces itself on the LAN interface (the one with the default route) so that clients find it without typing an address:
+
+- **Windows 10/11:** WS-Discovery (wsdd) shows the NAS under *Network*; LLMNR answers `\\SimpleNAS`.
+- **macOS and Linux:** mDNS/Bonjour (Avahi) shows it in Finder, Nautilus and Dolphin, makes it reachable as `SimpleNAS.local` (your `nas_name`) and lets Time Machine find backup shares.
+
+Only one Avahi daemon can work per host. If another app with host network starts its own Avahi, both claim the same IP address and the one that starts second loops with `Host name conflict, retrying with <name>-2`. Simple NAS starts early, so the other app is usually the one that loops. In that case set `mdns_enabled: false` here (or switch off Avahi in the other app). The NAS then stays reachable by IP address or by a DNS name from your router, and Windows discovery keeps working, but Finder, Linux file managers and Time Machine no longer find it on their own.
+
+## Recycle bin for network shares
+
+Windows Explorer, the macOS Finder and Linux file managers delete files on a network share for good – there is no client-side trash for SMB. Simple NAS therefore turns on Samba's `vfs_recycle` for every writable share: whatever a client deletes is moved into the hidden folder `.recycle` at the root of that share, with its folder structure kept. To restore a file, move it back (show hidden files in your file manager, or use the Files tab).
+
+Settings tab → **Recycle bin for network shares**: switch it on or off (default: on), set how many days deleted files are kept (default: 30) and see or empty each share's bin. Simple NAS removes older entries every few hours. A `.recycle` folder that already existed before the bin was turned on (e.g. from an earlier Samba setup) is never emptied automatically – only with **Empty**. Temporary files (`*.tmp`, `~$*`, `.~lock.*#`, `*.part`, `*.crdownload`) are deleted directly. File backup jobs, restic and rclone skip `.recycle`.
+
+Limit: the bin lives inside the share. A drive mounted *below* a share's root cannot move files into it, so deletions there stay permanent – give each drive its own share.
+
+## Time Machine (macOS backups)
+
+Edit a share and switch on **Time Machine**. Macs on the network then offer it under *System Settings → General → Time Machine → Add Backup Disk* (announced via Bonjour `_adisk._tcp`); log in with a Samba user that has access to the share.
+
+- **Use at most (GB)** caps how much space the backups may take (Samba `fruit:time machine max size`); `0` = unlimited. Without a limit Time Machine fills the whole drive over time and only then deletes old backups.
+- The drive needs extended attributes: **ext4** is best, NTFS works too, **exFAT/FAT do not**.
+- The recycle bin is off for Time Machine shares – Time Machine deletes old backup data all the time, and all of it would end up in `.recycle`.
+- A dedicated share (e.g. a folder `TimeMachine` on the drive) per Mac or for all Macs is the usual setup; one share can hold several Macs.
+
+## Services per share (SMB, WebDAV, FTP)
+
+In the share dialog, *Services* decides how a share can be reached:
+
+| Service | Default | Note |
+|---|---|---|
+| SMB | on | Off: the share does not appear in the Windows/Mac network at all (and is not a Time Machine target), e.g. for a folder only a camera writes to over FTP |
+| WebDAV | on | Only matters when `webdav_enabled` is on. Untick shares that should not be reachable through WebDAV, especially if WebDAV is published on the internet |
+| FTP | off | Only matters when `ftp_enabled` is on. Tick only the shares a device really needs – FTP is unencrypted |
+
+Shares created before 3.16.0 keep SMB and WebDAV; FTP has to be ticked once. The switches in the add-on configuration still start or stop the WebDAV and FTP servers as a whole.
+
+## WebDAV
+
+Switch on `webdav_enabled` in the add-on configuration and restart the add-on. Simple NAS then also serves every active share over WebDAV on `webdav_port` (default 8102):
+
+- `http://<HA-IP>:8102/` lists the shares the logged-in user may open, `http://<HA-IP>:8102/<share>` opens one directly. Shares with WebDAV unticked in the share dialog are left out (see "Services per share").
+- **Login with the Samba users** (Users tab) and their passwords – nothing new to set up. The same rules as in Samba apply: listed users and groups, read-only shares stay read-only. **Public shares need a login too**, because WebDAV is often reachable from the internet.
+- Deleting moves files into the share's recycle bin (`.recycle`) when it is on, like over Samba.
+- Symlinks are not followed; nothing outside a share is reachable.
+- Ten wrong passwords within 15 minutes lock the IP address and the user name (15 min, doubling on repeat, max. 24 h), as on the sharing site. Failed logins appear in the add-on log.
+- **Lifting a lock:** Settings tab → WebDAV → *Locks*: click a lock to lift it. Setting a new password for a user in the Users tab lifts that user name's lock too. A restart of the add-on clears all locks.
+
+**Clients:** macOS Finder → *Go → Connect to Server*; Linux file managers with `dav://` instead of `http://` (`davs://` for HTTPS); on phones a file app with WebDAV support (e.g. Solid Explorer, Documents, CX File Explorer). **Windows** only uses WebDAV with Basic login over **HTTPS** – publish the port through Nginx Proxy Manager with a domain and certificate, which is also the way for access on the go. Put the proxy's address into `share_trusted_proxies` so lockouts hit the visitor, not the proxy.
+
+The settings tab shows whether WebDAV runs and lists the addresses.
+
+## FTP
+
+Some devices can only upload over FTP, for example IP cameras that store snapshots or scanners that scan to a folder. Switch on `ftp_enabled` in the add-on configuration and restart the add-on. Simple NAS then serves every active share over FTP on `ftp_port` (default 21):
+
+- **FTP is off for every share until you tick it:** Shares tab → edit the share → *Services* → **FTP**. Only shares with FTP ticked appear.
+- The FTP root `/` lists those shares the logged-in user may open; `/<share>/...` is the share itself. A camera that should store its pictures in the share `camera` gets the path `/camera`.
+- **Log in with the Samba users** (Users tab) and their passwords. The same rules as in Samba apply: listed users and groups, read-only shares stay read-only. There is no anonymous FTP; public shares need a login too.
+- Active and passive mode both work. Passive mode uses the ports in `ftp_passive_ports` (default 30000–30010).
+- Deleting moves files into the share's recycle bin (`.recycle`) when it is on, like over Samba. Symlinks pointing outside a share are refused.
+- Wrong passwords lock the IP address and the user name like WebDAV does (shared lock list). The Settings tab → FTP shows the state, the server address and the locks; click a lock to lift it.
+- **FTP log:** every login, download and upload (with size and duration), deletion, rename and refused command is written to `/data/ftp.log`, plus one summary per session. The Settings tab → FTP shows how much each device moved in the last 24 hours and the latest entries. The file is kept at about 2 MB; older entries are dropped. The add-on log only gets the session summary, and only when a session had errors or moved more than 100 MB – a camera uploading pictures does not fill it. Passwords are never logged.
+
+**FTP is unencrypted** – user name, password and files travel in plain text. Use it in the home network only and never forward the port in your router. Best to create a Samba user just for the device and allow it only the one share it writes to.
+
+**Moving from the FTP add-on:** stop the FTP add-on first (both want port 21), switch on `ftp_enabled`, restart Simple NAS and tick FTP for the share the device writes to. Then point the device at that share: same server address and port, the Samba user, and the path `/<share>/...` instead of the old `/media/...` or `/share/...`.
+
+## Running alongside the official Samba add-on
+
+Both add-ons use `host_network: true` and bind to the same SMB ports (445 and 139), so they **cannot run simultaneously** with default settings.
+
+If you need both, set `smb_port` in Simple NAS to a non-standard port (e.g. `4445`) and connect from clients using:
+
+- Windows: `\\<HA-IP>:4445\ShareName` (or map network drive with full UNC path)
+- macOS: `smb://<HA-IP>:4445/ShareName`
+
+---
+
+## Drive mounting and stability
+
+Simple NAS automatically resolves `/dev/sdX` device names to their stable `/dev/disk/by-id/…` equivalents before saving a mount. This means:
+
+- A USB drive mounted as `/dev/sdb1` today will still be found correctly after a reboot even if the kernel assigns it a different `/dev/sd*` name.
+- If a drive is **not connected at boot**, its Samba share is automatically set to `available = no` — it will not be visible to clients and will not accidentally point to another device or an empty directory.
+- Saved mounts are **automatically restored on every add-on start**, using the filesystem type that was detected at mount time (e.g. `ext4`) rather than relying on kernel auto-detection, which can fail on some USB devices.
+
+> ⚠️ **Devices that back the HA system (`/`, `/boot`, …) are marked SYSTEM** in the GUI and require explicit confirmation before mounting/unmounting.
+
+**Supported filesystems:** what the Home Assistant OS kernel can read – ext2/3/4, FAT/vfat, NTFS (via ntfs-3g), exFAT and a few more. **XFS is not supported:** the Home Assistant OS kernel does not contain it, and an add-on cannot add kernel modules. Mounting such a drive ends with a clear message; copy the data off on another computer and format the drive as ext4 (Drives tab → Format). **Macs, iPhones and exFAT/FAT:** these drives cannot store extended attributes, where Samba normally keeps the Finder metadata and other named streams. Simple NAS keeps the named streams of such shares in a separate store instead (`streams_depot`), so the iOS Files app can write there (without named streams it opens every file read-only), and resource forks go to `._*` companion files next to the file. The store starts empty with every add-on start, because exFAT/FAT give files new inode numbers on every load: Finder metadata such as tags does not survive a restart on these drives. The `._*` files are visible to Windows/Linux users. ext4 keeps everything and the folders tidier.
+
+---
+
+## SSD TRIM
+
+TRIM tells an SSD which blocks are free, which helps it keep its speed and lifetime. Simple NAS mounts drives without the `discard` option, so run it from time to time:
+
+- **Manually:** the **TRIM** button on a mounted partition in the Drives tab runs `fstrim` and reports how much was passed to the drive.
+- **Scheduled:** set `trim_interval_days` (e.g. `30`). Only drives that report TRIM support are included; the check runs hourly. Results are written to the add-on log and survive restarts.
+
+The system disk is never touched. **Not every USB adapter passes TRIM through to the SSD.** In that case the button tells you so and nothing has happened to your data; many adapters simply do not support it. Hard disks do not use TRIM.
+
+**USB adapters that support TRIM but are not enabled:** Many enclosures (for example with Realtek RTL9210/RTL9210B or ASMedia chips) report UNMAP support, but Linux leaves TRIM switched off for USB drives (`provisioning_mode` stays `full`). If the TRIM button says it is not available and the drive reports UNMAP support, the message suggests enabling the `trim_usb_unmap` option. With the option on, Simple NAS switches such drives to `provisioning_mode = unmap` right before each TRIM run, then runs `fstrim`. The setting lasts until the drive is reconnected or HA restarts and is applied again on the next run. Use it at your own risk and make a backup first; a few adapters claim UNMAP support but handle it incorrectly. The add-on log shows `TRIM enabled on sdX` when it worked.
+
+**Adapters that hide whether they can TRIM:** Some adapters run with the older `usb-storage` driver instead of `uas`. Linux then does not read the drive's VPD pages, so it cannot tell whether the drive supports UNMAP, and the TRIM message says so. With `trim_usb_unmap` on, Simple NAS asks the drive directly with a read-only SCSI INQUIRY before each TRIM run and switches TRIM on if the drive reports UNMAP support. If TRIM is not switched on, the add-on log explains why, for example:
+
+```
+TRIM not switched on for sdb: the drive does not report UNMAP support (LBPU=0) (driver usb-storage, mode full, LBPU 0, max_unmap 0, VPD from device)
+```
+
+Please include that line when you report a problem.
+
+---
+
+## Drive spindown / power saving
+
+Set `hdd_idle_seconds` to a value greater than `0` (e.g. `1800` for 30 minutes) to have mounted drives spin down after a period of inactivity. This saves power and reduces noise and mechanical wear on spinning HDDs.
+
+**How it works:**
+
+- Uses `hd-idle`, which monitors actual disk I/O via `/proc/diskstats` and issues the standby command when a drive has been idle long enough. This is the robust approach for **USB drives**, where the drive's built-in `hdparm -S` standby timer often does not work because USB-SATA bridges do not pass the ATA standby command through.
+- **Only the drives you mounted in Simple NAS are affected.** hd-idle is started with a global default of `-i 0` (never spin down) and is then explicitly pointed only at the base disks of the devices listed in `mounts.json`. **The HA system disk is never spun down**, because it is never part of your mounts.
+
+**Checking that it works:**
+
+The add-on log shows every spin event with its timestamp, how long the previous period lasted, and running totals per disk:
+
+```text
+2026-11-05 14:33:12 sda spindown after running for 2h 13m (total: running 120h 5m, standby 300h 2m, 41 spindowns)
+2026-11-05 19:02:40 sda spinup after standby for 4h 29m (total: running 120h 5m, standby 304h 31m, 41 spindowns)
+```
+
+The totals are kept in `/data/hdd_stats.json` and survive restarts; delete the file to start over. They are listed once when hd-idle starts. A period that is still open when the add-on stops is not counted, and the totals are tied to the disk name (`sda`), so they follow the name if Linux reassigns it to another drive. A spinup is logged when hd-idle next checks the disk, so its time can be a little late.
+
+**Important caveats:**
+
+- Spindown only happens when **nothing** touches the drive. On a Home Assistant system many processes may poll the disk periodically:
+  - An active Samba client keeping a connection open
+  - SMART monitoring / status checks
+  - Backup jobs
+  - HA media source scanning
+- If any of these access the drive, the idle timer resets and the drive stays awake. If your drive never spins down, check what is accessing it.
+- The **first access after spindown is slow** (a few seconds) while the drive spins back up. This is normal.
+- SSDs do not benefit from this and can safely ignore the setting.
+
+---
+
+## Accessing mounted drives from other add-ons
+
+Due to how HA OS isolates add-on containers (slave mount namespaces), it is **not possible** to make a drive mounted by Simple NAS directly visible to other add-ons or HA Core via a filesystem mount. Any mount performed inside one container stays within its own mount namespace.
+
+**The correct approach is Samba.** Other add-ons (Nextcloud, Jellyfin, Immich, …) can connect to a Simple NAS share via SMB:
+
+```
+smb://localhost:445/ShareName
+```
+
+Most add-ons with media or storage support have an SMB/CIFS mount option in their settings.
+
+---
+
+## ⚠️ Important warning for upgraders from versions 3.0.38–3.0.47
+
+Versions 3.0.38 through 3.0.47 included an experimental "bind-mount" feature that exposed mounted drives under `/share/<name>` for cross-add-on access. **This feature was removed in v3.0.48** because:
+
+1. It was **ineffective** — HA OS uses slave mount namespaces (`master:118`), so the bind never actually propagated to HA Core or other add-on containers.
+2. It was **dangerous** — bind mounts look like normal folders. Running `rm -rf /share/<name>` (e.g. to clean up what looks like an empty leftover folder) **recurses through the bind mount and deletes everything on the underlying drive**.
+
+**If you have ever used Simple NAS between versions 3.0.38 and 3.0.47**, please observe the following:
+
+- **NEVER run `rm -rf /share/<name>`** on a folder name that matches one of your previously mounted drives (e.g. `/share/nas`) without first verifying it is NOT a bind mount. Check with:
+  ```
+  mount | grep '/share/<name>'
+  ```
+  If anything appears in the output → it is still a bind mount, do NOT delete it. Reboot the add-on first to clear the bind.
+
+- After upgrading to v3.0.48 or later **and restarting the add-on at least once**, any leftover bind mount is gone. The empty `/share/<name>` directory can then be removed safely with `rmdir` (NOT `rm -rf`) — `rmdir` refuses to delete a non-empty directory and will safely error out if a bind is still active.
+
+Since v3.0.56 the migration step in `run.sh` automatically cleans any obsolete bind-mount entries from `/data/mounts.json` on startup, so the feature can never re-activate itself after an upgrade.
+
+---
+
+## Automation: reconnect shares after HA restart
+
+When Home Assistant restarts, HA Core may try to access a network path (backup location, media source) before Simple NAS has finished starting up. The automation below waits for Simple NAS to be ready and then restarts the add-on once, so Samba comes up again with all drives mounted and all shares available.
+
+> **Why not call the web API?** Earlier versions of this page used a `rest_command` that POSTed to `/api/samba/restart`. That no longer works: every state-changing API call needs the CSRF token of a browser session (otherwise `403`), and with `admin_password_enabled` also a login (otherwise `401`). Use Home Assistant's built-in `hassio.addon_restart` action instead - it goes through the Supervisor and needs no password or token.
+
+**Step 1 – Find the add-on slug.** Open **Settings → Apps → Simple NAS**. The last part of the address in your browser's address bar is the slug, e.g. `…/a0d7b954_simple_nas/info` → `a0d7b954_simple_nas` (the prefix before `_simple_nas` differs per installation; a local add-on is `local_simple_nas`). In the automation UI editor you can also simply pick **Simple NAS** from the add-on dropdown of the action.
+
+**Step 2 – Add the automation** (UI editor or `automations.yaml`), replacing `a0d7b954_simple_nas` with your slug:
+
+```yaml
+alias: "NAS: Reconnect shares after restart"
+description: >
+  Waits for Simple NAS to be ready after Home Assistant has started and
+  restarts the add-on once. Skips if the add-on is not running.
+trigger:
+  - platform: homeassistant
+    event: start
+condition: []
+action:
+  - alias: "Wait until Simple NAS is running (max. 5 minutes)"
+    wait_template: "{{ is_state('binary_sensor.simple_nas_running', 'on') }}"
+    timeout: "00:05:00"
+    continue_on_timeout: false
+
+  - alias: "Give Samba time to fully start"
+    delay: "00:00:45"
+
+  - alias: "Only proceed if Simple NAS is still running"
+    condition: state
+    entity_id: binary_sensor.simple_nas_running
+    state: "on"
+
+  - alias: "Restart Simple NAS (remounts drives, restarts Samba)"
+    service: hassio.addon_restart
+    data:
+      addon: a0d7b954_simple_nas
+mode: single
+max_exceeded: silent
+```
+
+> **Note:** The entity ID `binary_sensor.simple_nas_running` may differ slightly on your system. Check under **Settings → Devices & Services → Supervisor → Simple NAS → Entities** to find the correct name. If the sensor is shown as disabled there, enable it first.
+>
+> Do not add a trigger on this sensor turning `on`: the restart itself switches it off and on again, and the automation would restart the add-on in a loop. A restart interrupts open Samba connections for a few seconds.
+
+---
+
+## Sharing files on the internet (web sharing)
+
+Since 3.4.0 the add-on can publish folders and files through links. The share site is a **separate web application on its own port** (default 8101). Nothing from the admin interface exists on that port: a bug on the public site cannot reach the file manager, the Samba settings or the drive tools.
+
+### Prerequisites
+
+1. `admin_password_enabled: true` with a non-empty `admin_password`. The public site refuses to start without it, on purpose.
+2. `sharing_enabled: true`.
+3. A reverse proxy with TLS in front of port 8101. The add-on never terminates TLS itself. Nginx Proxy Manager (available as an add-on) is the tested path.
+4. `share_public_url` set to the address people will use, e.g. `https://files.example.com`. It is only used to build the links shown in the Sharing tab.
+
+### Nginx Proxy Manager
+
+Create a proxy host for your domain pointing at the HA host on port 8101 (scheme `http`), request a Let's Encrypt certificate and enable *Force SSL*. In the **Advanced** tab add:
+
+```
+client_max_body_size 0;
+proxy_request_buffering off;
+proxy_buffering off;
+proxy_read_timeout 3600s;
+proxy_send_timeout 3600s;
+```
+
+Without `client_max_body_size` every upload fails at nginx's 1 MB default; without `proxy_buffering off` nginx spools a whole folder download to disk before the browser sees the first byte.
+
+**Forward host:** use the LAN IP of your Home Assistant host (e.g. `192.168.1.10`), scheme **http**, port `share_port`. The add-on does not speak TLS itself; a proxy host set to `https` hangs and ends in a 502/504.
+
+**About `share_bind`:** keep `0.0.0.0` when Nginx Proxy Manager runs as a Home Assistant add-on. That add-on lives in its own container network and cannot reach the host's loopback, so a site bound to `127.0.0.1` is unreachable for it. Use `127.0.0.1` only for a reverse proxy running directly on the host (or an add-on with `host_network`). Because this add-on uses `host_network`, the `ports:` entry in the add-on UI is informational - the port is open on the LAN as soon as the site listens.
+
+**Do not reuse a port that another add-on maps** (the start log then says "Port ... ist bereits belegt"). Each add-on needs its own port.
+
+### How links work
+
+- A link is a 22-character token that cannot be guessed. Every failed password on a link counts against the link (20 per 15 minutes) *and* against the IP (10 per 15 minutes); a link locked this way shows "Locked" in the Sharing tab with a one-click unlock.
+- An unknown, disabled, expired or exhausted link, and a link whose folder is no longer mounted, all show the *same* page. Nobody can tell whether a token exists.
+- Changing a link's password, access mode or account list ends every session on that link immediately. "Generate new link" replaces the token.
+- Share accounts are separate from the Samba users. Their password hashes live in `/data/share_accounts.json` (mode 600) and, like all settings, in the reinstall-safe copy under `/config/.simplenas/auto` - which means they are part of your Home Assistant backups.
+- **Allow deleting** (off by default) gives visitors of a folder link a delete button on every file and folder, with a confirmation first. Drop-box and single-file links never offer it; the link's root folder, hidden files and symlinks cannot be deleted, and a document open in Collabora is refused. Every deletion is logged. There is no recycle bin - use it only for people you would also give Samba write access.
+- **Where uploads are stored:** *directly in the folder* the visitor is viewing, *a subfolder per day*, or *a subfolder per account* (only on links with "Specific accounts", because other links have no account name to sort by).
+- HTML and SVG files are never shown inline on the share site, only offered as downloads. A visitor-uploaded page served from your own domain would otherwise run scripts against every later visitor.
+
+### Brute-force protection (with or without Cloudflare)
+
+- Tokens are 22 characters from a 57-symbol alphabet (about 127 bits). Guessing one is not a realistic attack; scanning for them gets the address banned after 20 unknown links in 10 minutes.
+- Failed passwords count per address (10 per 15 min), per link (20, regardless of how many addresses take part) and per account (10). Every lockout doubles on repetition: 15 min, 30, 60 ... up to 24 h.
+- Each failure also sleeps 0.15-0.35 s, so even the allowed attempts are slow.
+- Link passwords and account passwords need at least 8 characters; use longer ones for anything that matters.
+- The real visitor address is taken from `X-Forwarded-For` (Nginx Proxy Manager) or `CF-Connecting-IP` (Cloudflare), but only when the request comes from an address in `share_trusted_proxies`. Without a proxy the socket address is used. Either way the limits apply to the visitor, not to the proxy.
+- Lockouts live in memory; a restart of the add-on clears them. Persistent bans belong in a firewall - see the CrowdSec section below.
+
+### CrowdSec integration
+
+The add-on ships a parser, three scenarios and an acquisition file for CrowdSec and can install them into the CrowdSec add-on's configuration with one click (both add-ons see `/config`).
+
+1. Nothing to configure. The **Set up CrowdSec** button in the Sharing tab starts a second copy of the access log at `/config/.simplenas/share_access.log` and points CrowdSec at it. That path matters: both add-ons map the Home Assistant config directory, while `/share` is *not* mapped into the CrowdSec add-on - a log file there is invisible to it and CrowdSec starts with `No matching files for pattern`. Set `share_log_export_path` only if you want a different location, and make sure the CrowdSec add-on can actually see it.
+2. In the Sharing tab click **Set up CrowdSec**. This copies `parsers/s01-parse/simplenas-share.yaml`, `scenarios/simplenas-share.yaml` and `acquis.d/simplenas-share.yaml` into `/config/.storage/crowdsec/config/`.
+3. Restart the CrowdSec add-on. `cscli metrics` then shows the `simplenas-share` source and `cscli scenarios list` the three scenarios: `simplenas/share-bf` (5 failed passwords in ~50 s), `simplenas/share-scan` (10 unknown links in ~5 min) and `simplenas/share-locked` (the add-on locked the address itself).
+
+Bans then reach whatever bouncer you run. Two things to know:
+
+- With the **firewall bouncer** on the Home Assistant host, bans only bite for traffic that reaches the host directly or through Nginx Proxy Manager. Traffic through a **Cloudflare tunnel** arrives from the tunnel container, so the offender's address is never seen by the host firewall. For that path use CrowdSec's Cloudflare bouncer (it pushes decisions into Cloudflare's firewall) or Cloudflare's own WAF rules.
+- The log records the visitor address as the add-on sees it (`X-Forwarded-For` / `CF-Connecting-IP` from trusted proxies). That is the address CrowdSec bans.
+
+### Virus scanning
+
+Enable `share_clamav_enabled` and make sure the ClamAV add-on exposes clamd on TCP 3310 (`TCPSocket`/`TCPAddr` in its clamd configuration). The Sharing tab's **Test** button sends `PING` and then the EICAR test string through the scanner and reports both. With `share_clamav_on_error: reject` (default) uploads are refused while the scanner is down - silently accepting would defeat the point of enabling it.
+
+### Editing office files with Collabora Online
+
+Since 3.9.0 the share site can open office documents (docx, xlsx, pptx, odt, ods, odp and whatever else your Collabora server announces) in the browser through [Collabora Online](https://www.collaboraonline.com/), e.g. the Collabora add-on. Simple NAS acts as the WOPI host - the same role Nextcloud plays for Collabora.
+
+**Setup**
+
+1. Collabora must be reachable in the browser under its own domain, e.g. `https://collabora.example.com` (Nginx Proxy Manager: scheme `https`, port 9980, *Websockets Support* on).
+2. Allow the share site's domain as a WOPI host in Collabora. With the Collabora add-on that is `extra_params`, e.g.
+   `--o:storage.wopi.alias_groups[@mode]=groups --o:storage.wopi.alias_groups.group[1].host[0]=files\.example\.com --o:storage.wopi.alias_groups.group[1].host[0][@allow]=true`
+3. Simple NAS options: `collabora_enabled: true`, `collabora_url: https://collabora.example.com`. `share_public_url` must be set - Collabora calls the share site under that address.
+4. Sharing tab → **Collabora: Test** shows how many file types were found and whether a proof key is present.
+5. On every link that should allow saving, switch on **Allow editing with Collabora**. Links without it open documents read-only. Drop-box links never offer documents.
+
+The Nginx Proxy Manager settings from above (`client_max_body_size 0;` in particular) matter here too: saving a document is an upload to the share site.
+
+**How it is secured**
+
+- The editor page hands Collabora a short-lived access token bound to one link, one file and - for account links - one account. Collabora uses it for every read and save; every call re-checks the link (enabled, not expired, token not rotated, password unchanged), the account (enabled, password unchanged) and whether editing is still allowed. Revoking any of them ends a running editor session at its next call.
+- Every WOPI call must carry a valid signature from the proof key in your Collabora server's discovery, so a leaked access token alone cannot be used from anywhere else (`collabora_verify_proof`, leave on).
+- Saves go through a temporary file in the same folder and replace the document atomically, keeping owner and mode for Samba. If the file changed on disk since Collabora loaded it (a Samba user saved it), Collabora asks the user instead of overwriting it. Locks are kept in `/data/wopi_locks.json`, so a restart does not orphan an open editor.
+- "Save as" into the folder is disabled; downloading a copy in another format from Collabora still works.
+- Only the editor page may frame the configured Collabora origin; every other page keeps `frame-src` closed. With virus scanning on, every save is scanned like an upload.
+
+**Special cases**
+
+- *The server cannot reach Collabora's public address* (e.g. a Cloudflare challenge): set `collabora_internal_url`, e.g. `https://homeassistant:9980`. Only the list of file types is fetched there; browser URLs are rewritten to `collabora_url`. If that certificate is issued for a different name, also set `collabora_verify_tls: false`.
+- *Collabora cannot reach the share site's public address*: set `collabora_wopi_url`, e.g. `http://homeassistant:8101`, and allow that host (and add `--o:net.frame_ancestors=files.example.com`) in Collabora.
+- The access log records `edit_open`, `edit_save` and `wopi_denied` events.
+
+### Install as an app (Android home screen icon)
+
+The share site is an installable web app. Open a link (or the portal `/`) in Chrome on Android and choose **Install app** or **Add to home screen** from the menu. You get an icon that opens the share full screen without the browser bar.
+
+- A link installs on its own, named after the link and starting on it; the portal installs as "Simple NAS" and starts on "My shares".
+- Only works over **HTTPS** (e.g. through Nginx Proxy Manager / Cloudflare); Chrome does not offer installing on plain `http://`.
+- Nothing is cached offline: files, lists and logins always come fresh from the server. Password and account links still ask for the login once the session (`share_session_hours`) has expired.
+
+### Access log
+
+Every view, login, failed login, download and lock-out is written to `/data/share_access.log` (JSON lines, rotated at `share_log_max_mb`). The Sharing tab shows the last entries with filters. The log records link ids and paths relative to the link, never tokens or absolute paths.
+
+### The public site runs sandboxed (`share_sandbox`, default `auto`)
+
+The add-on as a whole runs as root with `full_access` for its drive management, but the internet-facing share site does **not**. Since 3.8.0 it runs as its own process, dropped to the unprivileged user `nobody`, stripped of `SYS_ADMIN`/`SYS_RAWIO` and every capability except the file ones an upload needs, and locked into a mount namespace where `/config`, `/ssl`, `/addon_configs`, `/backup` and the secret files inside `/data` (the admin password, the Samba password database) are masked with empty stand-ins. A code-execution flaw in the public code then reaches only the shared folders and its own handful of state files - not the Home Assistant host, not the admin password.
+
+- `share_sandbox: auto` (default) uses the sandbox and, if it cannot be set up on your system, falls back to running the site in the main process (the pre-3.8 behaviour) so the site is never left down.
+- `share_sandbox: on` requires the sandbox: if it cannot start, the public site stays off rather than running unconfined.
+- `share_sandbox: off` runs it in the main process, as before.
+
+The sandbox needs `unshare` and `setpriv` (both present in the image) and Protection Mode off (as the rest of the add-on already does). The admin UI keeps full function: it reads the worker's lock-outs and access log through small files and passes unlock requests back the same way.
+
+The reverse proxy being the only way in and, where the proxy runs on the same host, `share_bind: 127.0.0.1`, remain good extra measures.
+
+### Admin login protection
+
+The admin interface (port 8100) locks a visitor out after 10 failed logins per IP, or a username after 20 failed logins across all IPs, within 15 minutes (15 min, doubling on repeat, max. 24 h). Access through the Home Assistant **Open** button (Ingress) is never locked. Behind Cloudflare / Nginx Proxy Manager the real visitor IP is taken from `CF-Connecting-IP` / `X-Forwarded-For`, but only from addresses in `share_trusted_proxies`. With `admin_ingress_only: true` the admin interface answers only through Ingress.
+
+## External backups (restic / rclone)
+
+**Backup → External Backups** copies folders such as `/share` and `/media` off the machine: to a Hetzner Storage Box, an S3 bucket (Hetzner Object Storage, Wasabi, AWS, MinIO, Cloudflare R2 …), Backblaze B2, any SFTP server, a WebDAV cloud (Nextcloud, ownCloud), another NAS over SMB, a second USB disk – or any of the 70+ providers rclone supports (OneDrive, Google Drive, Dropbox, pCloud …).
+
+Each job picks one of two tools:
+
+| | **restic** | **rclone** |
+|---|---|---|
+| What lands at the provider | an encrypted archive | the files 1:1, readable there |
+| Encryption | always (client-side) | optional (rclone crypt) |
+| Older versions | snapshots, kept per day / week / month | replaced and deleted files go to `.versions/<date>/`, purged after N days |
+| Duplicates | stored once | stored as often as they occur |
+| Restore | in Simple NAS, or with restic on any computer | in Simple NAS, or download the files directly |
+
+Both reach the provider through rclone; a local folder is handed to them directly.
+
+### Example: Hetzner Storage Box
+
+1. In the Hetzner Console open the Storage Box and note server (`u123456.your-storagebox.de`) and user (`u123456`, or a sub-account like `u123456-sub1`).
+2. In Simple NAS: **Backup → + New external backup**.
+3. Name, tool **restic**, sources `/share` and `/media` (folder button or type the path).
+4. Provider **Hetzner Storage Box**, server, user, password. Port 22 (plain SFTP) always works; port 23 only when **SSH support** is switched on for the box.
+5. **Generate** an encryption password and store it in your password manager.
+6. Schedule e.g. daily at 03:00 → **Test connection** → **Save**.
+
+The first run uploads everything; after that only changes are transferred.
+
+### Good to know
+
+- **The encryption password cannot be recovered.** Without it the backup is useless – also for you. It is stored with the job (and in the reinstall-safe copy under `/config/.simplenas/auto`), but keep a copy outside Home Assistant. After the first backup it can no longer be changed.
+- **Schedule**: daily or weekly at a fixed time (Home Assistant time zone). A run missed while Home Assistant was off is caught up once at the next start. Only one job runs at a time; others wait in a queue.
+- **Interrupted backups continue.** A backup cut off by a restart or an add-on update is queued again two minutes after the next start; restic and rclone skip what already reached the provider (a file that was half uploaded starts over). A run you cancel yourself is not resumed.
+- **Empty sources stop the run.** If a source folder is missing or empty – typically an unplugged USB disk leaving its empty mount point behind – nothing is backed up and the job fails. Otherwise rclone would delete the copy and restic's retention would eventually rotate the good snapshots away.
+- **Failure notification**: with *Notify on failure* (default on) a failed backup creates a persistent notification in Home Assistant; the next successful run removes it.
+- **Restore** opens the backed-up folders: pick a version (restic) and a file or folder, and a destination folder. The folder structure is kept (`<destination>/share/...`). Restoring never deletes anything; files with the same name are overwritten. With rclone you can also browse `.versions` to get an older copy back.
+- **Check** (restic only) verifies the archive structure.
+- **Destination locked after the first backup.** Backup program, provider, server, user, port, folder and encryption can only be changed after **Change destination …**, which explains the order: move or rename the data at the provider first, then enter the new place, then **Test connection**. After such a change the test does not create the folder and reports an error if no backed-up data is there. Changing only the entry would start a second archive from scratch. Credentials (e.g. the box password) stay editable.
+- **Other providers (rclone config)**: run `rclone config` on a PC, set up the provider (this is where the browser login for OneDrive/Google Drive happens), then paste that section from `rclone config show` into the job. Bucket or subfolder go into *Folder on the destination*.
+- **Exclude** patterns, one per line (`*.tmp`, `.Trash-*`, `@Recycle`). `.upload-*.part` – half-finished uploads – is excluded by default. An **upload limit** in Mbit/s keeps the internet line usable. **Parallel connections** (default 8) decide how many uploads run at once – a single SFTP stream rarely fills the line. A Hetzner Storage Box allows 10 connections at a time, so stay at 8 or below there; lower it if runs break off.
+- Credentials live in `/data/remote_backup/` (mode 600); the sandboxed public share site cannot see that folder. The restic cache (`/data/cache`) is left out of Home Assistant backups.
+- Deleting a job in Simple NAS does **not** delete the data at the provider.
+
+### When Home Assistant is gone: emergency sheet and emergency package
+
+- **Emergency sheet** (button on each job): a printable page with where the data lives, the **archive password** character by character (with hints for look-alikes such as `l`/`I`/`1` and `O`/`0`), what is backed up and how to restore by hand – an rclone config with placeholders and the restic commands. Provider secrets (box password, S3 secret, keys) are deliberately **not** printed – they can be reset at the provider; the archive password cannot. Print it, keep it away from the NAS, and print it again after changing the job.
+- **Emergency package** (repository folder [`notfall/`](https://github.com/gregorwolf1973/EasyNas-HASSIO-Addon/tree/main/notfall)): `bash notfall/paket-bauen.sh` builds `SimpleNAS-Notfall-<date>.zip` with restic and rclone for Windows and Linux (checked against the official checksums). Unpacked on any PC – Windows: double-click `WIEDERHERSTELLEN-Windows.cmd`, Linux: `bash wiederherstellen-linux.sh` – it asks for Storage Box, user, port, path and the two passwords (typed, never stored), then lists the snapshots and restores everything or a single folder/file. Nothing to install. Supports restic jobs on a Hetzner Storage Box or an SFTP server with password. Keep the ZIP on a USB stick next to the printed sheet.
+
+## Reinstall-safe backup
+
+Every time you save a setting (share, user, group, mount) the add-on writes a backup to `/config/.simplenas/auto/`. This directory survives an add-on uninstall/reinstall because it lives in the persistent `/config` volume.
+
+On the next start after a fresh install the backup is automatically detected and restored.
+
+You can also create **manual snapshots** from the Backup tab (up to 10 kept). Each snapshot can be individually restored or deleted.
+
+---
+
+## ⚠️ Important: disable Protection Mode
+
+This add-on needs `CAP_SYS_ADMIN` to run `mount` / `umount`. Home Assistant only grants the add-on's elevated permissions (`full_access`, `privileged`, `apparmor: false`) when **Protection Mode is turned OFF**.
+
+**If Protection Mode is still ON, every mount fails** with:
+
+```
+mount: permission denied (are you root?)
+... Operation not permitted
+```
+
+(and NTFS additionally fails to create `/dev/fuse` because `/dev` is read-only).
+
+**Fix:**
+
+1. Open the **Simple NAS** add-on page in Home Assistant
+2. Go to the **Info** tab
+3. Turn **OFF** the **Protection mode** toggle
+4. **Restart** the add-on
+
+You can confirm it worked in the add-on log: at startup the helper prints its capabilities, and `CapEff` should be a non-zero value (an all-zero `CapEff` means no capabilities = Protection Mode still on).
+
+---
+
+## Security rating explanation
+
+Home Assistant assigns this add-on a **security score of 1 (low)** because of the following required capabilities:
+
+| Capability | Reason |
+|---|---|
+| `full_access: true` | Required to access all mapped volumes (`/share`, `/media`, `/config`, `/ssl`, `/addon_configs`) |
+| `host_network: true` | Required for Samba to bind to host ports 445/139 and for mDNS/WS-Discovery to work correctly |
+| `SYS_ADMIN` privilege | Required to run `mount` and `umount` inside the container |
+| `SYS_RAWIO` privilege | Required for low-level block device access (formatting, fsck) |
+| `DAC_READ_SEARCH` privilege | Required to read files owned by other users/processes |
+| `apparmor: false` | AppArmor would block `mount` system calls needed for USB drive support |
+
+**How to mitigate the risk:**
+
+- Enable web GUI password protection (`admin_password_enabled: true`) so the management interface is not open to anyone on your network.
+- Only expose Samba shares on your local LAN — do **not** forward ports 445 / 139 to the internet.
+- Use per-share user authentication instead of public/guest shares wherever possible.
+- Keep the add-on updated.
+
+---
+
+## Troubleshooting
+
+**Mount fails with "permission denied (are you root?)" / "Operation not permitted"**  
+Protection Mode is still enabled. Turn it OFF in the add-on Info tab and restart — see the "Important: disable Protection Mode" section above. This is the #1 cause of mount failures on a fresh install.
+
+**Drive not remounted after reboot**  
+Upgrade to v3.0.49 or later. Older versions used `fstype: auto` when restoring mounts on startup, which fails on some USB devices. The current version saves and reuses the detected filesystem type (e.g. `ext4`) so the drive mounts reliably on every start.
+
+**Share shows "path not found"**  
+The drive is not mounted. Go to the Drives tab and mount it first.
+
+**Share disappears after reboot**  
+The drive was saved using a raw `/dev/sdX` path with an older version. Delete the mount entry and re-mount the drive — Simple NAS will now save the stable by-id path automatically.
+
+**Can't see the NAS in Windows Network Browser**  
+Make sure `wsdd` is running (check add-on logs). Windows 10/11 uses WS-Discovery instead of NetBIOS. Since 3.13.0 wsdd only listens on the LAN interface (the one with the default route, logged as `WSDD started … interface=…`); before, on Home Assistant OS with its internal Docker networks, the announcements often never reached the LAN.
+
+**"Open Web UI" shows another add-on (e.g. Dnsmasq-DHCP)**  
+Fixed in 3.13.0: Home Assistant now assigns Simple NAS its own Ingress port. Direct access via `web_port` (default 8100) stays as it was; if another host-network add-on already uses 8100, change `web_port` – the **Open** button keeps working either way.
+
+**SSL certificate folder is read-only**  
+Upgrade to v3.0.32 or later — the `/ssl` mapping was changed from `ro` to `rw`.
+
+**Conflict with official Samba add-on**  
+Set `smb_port` to a value other than `445` in Simple NAS configuration. See section above.
+
+**Samba share unavailable right after HA restart**  
+This is a start-order race condition: HA Core checks the network path before Simple NAS has finished loading. Use the automation described above to automatically restart the add-on once it is ready.

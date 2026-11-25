@@ -1,0 +1,578 @@
+# Changelog
+
+## 3.23.2
+- Prebuilt images from GitHub Container Registry: installs and updates no
+  longer build locally.
+
+## 3.23.1
+- **FTP-Protokoll: neuer Tagesordner der Kamera ist kein Fehler mehr.** Kameras wechseln jeden Morgen zuerst in den Ordner des neuen Tages, bekommen "Ordner nicht gefunden" und legen ihn dann an. Das stand bisher als Fehler im FTP-Protokoll und brachte die Sitzung ins Add-on-Log. Jetzt haelt Simple NAS einen abgelehnten Ordnerwechsel kurz zurueck und verwirft ihn, wenn das Geraet genau diesen Ordner gleich danach anlegt. Ein Ordnerwechsel ins Leere ohne anschliessendes Anlegen zaehlt weiter als Fehler.
+
+## 3.23.0
+- **FTP-Protokoll:** Bisher schrieb der FTP-Server nur Fehlanmeldungen und Sperren ins Log. Wer wann welche Dateien geladen oder hochgeladen hatte, war nicht zu sehen, auch nicht, warum ein Geraet mit einem Pfad scheiterte. Jetzt landen jede Anmeldung, jeder Download und Upload (mit Groesse und Dauer), Loeschen, Umbenennen, abgelehnte Befehle und eine Zusammenfassung je Sitzung in `/data/ftp.log`. Unter Einstellungen > FTP zeigt Simple NAS die Datenmenge je Geraet der letzten 24 Stunden und die neuesten Eintraege; dort laesst sich das Protokoll auch leeren. Die Datei bleibt bei etwa 2 MB, aeltere Eintraege fallen weg. Ins Add-on-Log kommt nur die Zusammenfassung einer Sitzung, und nur bei Fehlern oder mehr als 100 MB - eine Kamera, die alle paar Minuten ein Bild hochlaedt, fuellt es also nicht. Ordner, die es schon gibt, und Dateiproben vor dem Hochladen zaehlen dabei nicht als Fehler. Passwoerter werden nie protokolliert.
+
+## 3.22.0
+- **Externe Backups: Serverschluessel wird geprueft** (SFTP und Hetzner Storage Box): Bisher verband sich rclone mit jedem Server, der unter dem eingetragenen Namen antwortete ("No host key validation" im Log). Wer sich ins Netz dazwischenschaltet, haette sich als Storage Box ausgeben koennen. Jetzt holt Simple NAS den Schluessel beim ersten Verbinden (`ssh-keyscan`), speichert ihn im Auftrag und prueft ihn bei jeder weiteren Verbindung. Zeigt der Server spaeter einen anderen Schluessel, bricht das Backup mit einer verstaendlichen Meldung ab. Der Fingerabdruck steht im Auftrag unter "Erweitert"; dort laesst sich der Schluessel nach einer Erneuerung durch den Anbieter neu lernen. Bei Hetzner kann man ihn mit den Fingerabdruecken in der Hetzner-Dokumentation vergleichen. Aendert man Server oder Port, wird der Schluessel ebenfalls neu gelernt. Andere Anbieter (S3, B2, WebDAV, SMB, lokal) sind nicht betroffen.
+
+## 3.21.0
+- **Laufwerke nach Adapter- oder Gehaeusetausch wiederfinden:** Simple NAS merkte sich USB-Laufwerke unter einem Namen, der die Seriennummer des USB-Adapters enthaelt (`/dev/disk/by-id/usb-...`), nicht die der Festplatte. Nach dem Tausch von Adapter oder Gehaeuse fand es die Platte deshalb nicht mehr, obwohl sich auf ihr nichts geaendert hatte; die Freigaben blieben leer, im Log stand "ist kein Block-Device". Jetzt speichert Simple NAS zusaetzlich die UUID des Dateisystems. Fehlt der gespeicherte Pfad beim Start, sucht es das Laufwerk ueber die UUID, haengt es ein und merkt sich den neuen Pfad; das Log nennt den Grund. Bereits eingerichtete Laufwerke bekommen ihre UUID beim ersten Start mit dieser Version, solange sie angeschlossen sind. War der Adapter schon vorher getauscht, das Laufwerk einmal aus- und wieder einhaengen.
+
+## 3.20.0
+- **mDNS/Bonjour abschaltbar** (Issue #20): Die neue Option `mdns_enabled` (Standard an) laesst Avahi ungestartet. Auf einem Host funktioniert nur ein Avahi: Startet eine andere App mit Host-Netzwerk ihr eigenes Avahi, beanspruchen beide dieselbe IP-Adresse, und das zweite haengt in "Host name conflict, retrying with ...-2, -3, ..." - auch mit anderem Host-Namen oder auf eine Schnittstelle beschraenkt (auf Home Assistant OS nachgestellt). Ohne mDNS erscheint das NAS nicht mehr im Finder und in Linux-Dateimanagern, und Time Machine findet es nicht von selbst; die Windows-Erkennung (WSDD und LLMNR) bleibt.
+- **Avahi kuendigt nur noch im Heimnetz an:** Es arbeitet wie WSDD seit 3.13.0 nur auf der Schnittstelle mit der Standardroute. Bisher bekamen Clients zusaetzlich 127.0.0.1 und die Docker-Adressen 172.30.x.x angeboten.
+- **Host-Name aus `nas_name`:** Das NAS ist per mDNS jetzt als `SimpleNAS.local` erreichbar (bzw. dem eigenen `nas_name`) statt als `cfa7a29e-simple-nas.local`. Die Diensteintraege von Avahi fuer SSH, das Simple NAS nicht anbietet, und eine veraltete feste SMB-Dienstdatei sind entfernt.
+
+## 3.19.1
+- **TRIM bei USB-Adaptern mit `usb-storage`-Treiber** (Issue #18): Laeuft ein Gehaeuse mit dem aelteren Treiber `usb-storage` statt `uas`, liest Linux die VPD-Seiten des Laufwerks nicht; 3.19.0 hielt TRIM dann fuer unmoeglich und meldete nur "unsupported". Mit `trim_usb_unmap` fragt Simple NAS solche Laufwerke jetzt vor dem TRIM-Lauf selbst per SCSI-INQUIRY (nur lesend) und schaltet TRIM ein, wenn sie UNMAP melden. Wird TRIM nicht eingeschaltet, steht der Grund im Add-on-Protokoll (Treiber, provisioning_mode, LBPU, max_unmap, Herkunft der VPD-Daten). Ohne die Option sagt die TRIM-Meldung bei solchen Adaptern, dass die Faehigkeit unbekannt ist und die Option helfen kann. Die Abfrage wurde an zwei echten USB-Laufwerken (Ugreen-Gehaeuse mit ASMedia-Chip, `uas`) mit den Daten aus /sys verglichen; ein Gehaeuse mit `usb-storage` hatte ich nicht zur Hand.
+
+## 3.19.0
+- **TRIM bei USB-Adaptern freischalten** (Issue #18): Viele USB-Gehaeuse, etwa mit Realtek RTL9210B oder ASMedia-Chip, koennen TRIM, Linux laesst es bei USB-Laufwerken aber aus; der TRIM-Knopf meldete dann "nicht moeglich". Die neue Option `trim_usb_unmap` (Standard aus) schaltet vor jedem TRIM-Lauf fuer USB-Laufwerke, die UNMAP melden, `provisioning_mode = unmap` ein und startet dann `fstrim`. Das gilt bis zum Abstecken oder Neustart und wird beim naechsten Lauf erneut gesetzt. Auf eigenes Risiko: einige wenige Adapter melden TRIM und verarbeiten es fehlerhaft. Ohne die Option sagt die Meldung jetzt, wenn das Laufwerk TRIM eigentlich kann. Die System-Festplatte bleibt unberuehrt.
+
+## 3.18.0
+- **SSD-TRIM** (Issue #18): Im Laufwerke-Tab startet der Knopf **TRIM** bei eingehaengten Partitionen `fstrim` und meldet, wie viel Speicher an das Laufwerk weitergegeben wurde. Mit `trim_interval_days` (z. B. `30`) laeuft es automatisch auf allen Laufwerken, die TRIM melden; Standard ist aus. Die System-Festplatte bleibt unberuehrt. Viele USB-Adapter geben TRIM nicht weiter; dann sagt die Oberflaeche das deutlich, an den Daten aendert sich nichts.
+
+## 3.17.0
+- **Festplatten-Standby im Log nachvollziehbar** (Issue #19): Jeder Spindown und Spinup von `hd-idle` steht jetzt mit Datum und Uhrzeit im Add-on-Log, dazu die Dauer der vorigen Phase und die Summen je Platte (Laufzeit, Standby, Anzahl Spindowns). Die Summen liegen in `/data/hdd_stats.json`, ueberstehen Neustarts und werden beim Start von hd-idle einmal ausgegeben. Eine eigene Option ist nicht noetig; es entstehen nicht mehr Log-Zeilen als bisher.
+
+## 3.16.0
+- **Dienste je Freigabe:** Im Freigabe-Dialog legt "Dienste" fest, ob eine Freigabe ueber SMB, WebDAV und FTP erreichbar ist. Bisher galt der Schalter fuer WebDAV und FTP fuer alle Freigaben auf einmal. Eine Freigabe ohne SMB erscheint nicht mehr im Windows- und Mac-Netzwerk, zum Beispiel ein Ordner, in den nur eine Kamera per FTP schreibt. In der Freigaben-Liste zeigen Schilder, welche Dienste an sind.
+- Standard: SMB und WebDAV an wie bisher, **FTP aus**. FTP ist unverschluesselt und soll nur dort laufen, wo ein Geraet es braucht. **Wer FTP seit 3.15.0 nutzt, muss bei der Freigabe des Geraets einmal FTP anklicken.** Die FTP-Karte im Einstellungen-Tab weist darauf hin, solange keine Freigabe FTP hat.
+
+## 3.15.0
+- **FTP** fuer Geraete, die nur FTP koennen, etwa IP-Kameras, die Schnappschuesse hochladen, oder Scanner. Mit `ftp_enabled` bietet Simple NAS alle Freigaben zusaetzlich ueber FTP an (Port `ftp_port`, Standard 21; passive Ports `ftp_passive_ports`, Standard 30000-30010). Damit ersetzt Simple NAS das separate FTP-Add-on. Das Wurzelverzeichnis `/` zeigt die Freigaben, die der angemeldete Benutzer oeffnen darf. Anmeldung mit den Samba-Benutzern und ihren Passwoertern; es gelten dieselben Rechte wie bei Samba. Anonymes FTP gibt es nicht. Geloeschtes landet im Papierkorb der Freigabe. Fehlversuche sperren IP und Benutzernamen wie bei WebDAV. Der Einstellungen-Tab zeigt Stand, Serveradresse und Sperren. FTP ist unverschluesselt und nur fuers Heimnetz gedacht.
+
+## 3.14.3
+- **Fix: iPhone/iPad (Dateien-App) koennen auf exFAT- und FAT-Laufwerke wieder schreiben** (Issue #15). Seit iOS 18 oeffnet die Dateien-App Dateien auf SMB-Freigaben ohne benannte Datenstroeme (Named Streams) nur lesend; vor 3.14.2 entstanden dort 0-KB-Dateien. Freigaben auf exFAT/FAT bekommen jetzt wieder `fruit` und als Ablage fuer die Datenstroeme `streams_depot` statt `streams_xattr`, denn exFAT/FAT kennen keine erweiterten Attribute. Die Ablage liegt in `/tmp` des Containers und beginnt mit jedem Start des Add-ons leer: `streams_depot` ordnet nach Inode-Nummer zu, und exFAT/FAT vergeben diese bei jedem Einlesen neu - eine dauerhafte Ablage zeigte nach einem Neustart Metadaten an der falschen Datei. Finder-Metadaten (z. B. Tags, Herkunft) ueberstehen auf diesen Laufwerken deshalb keinen Neustart; Resource Forks liegen weiter in `._*`-Dateien neben der Datei. ext4- und NTFS-Freigaben bleiben unveraendert.
+
+## 3.14.2
+- **Fix: Macs koennen wieder auf exFAT- und FAT-Laufwerke kopieren** (Issue #15, Fehler 100093). Simple NAS legt die Finder-Metadaten ueber `streams_xattr` in erweiterten Attributen ab, die exFAT/FAT nicht kennen; der uebliche Ausweg von macOS, `._*`-Begleitdateien, war gesperrt. Freigaben auf solchen Laufwerken werden jetzt beim Erzeugen der smb.conf erkannt (Probe-Attribut) und bekommen nur `catia`, `ea support = no` und erlauben `._*`-Dateien - wie auf einem lokal angeschlossenen exFAT-Stick. ext4- und NTFS-Freigaben bleiben unveraendert.
+
+## 3.14.1
+- **WebDAV-Sperren aufheben:** Die WebDAV-Karte im Einstellungen-Tab zeigt aktive Sperren und Fehlversuche; ein Klick auf eine Sperre hebt sie auf. Bisher ging das nur durch Abwarten oder einen Neustart - der Knopf im Teilen-Tab erreicht WebDAV nicht, weil die Freigabe-Seite abgeschottet mit eigener Sperrliste laeuft. Ein neues Passwort fuer einen Benutzer (Benutzer-Tab) hebt auch die Sperre seines Benutzernamens auf.
+
+## 3.14.0
+- **WebDAV** (Issue #12): Mit `webdav_enabled` bietet Simple NAS alle Freigaben zusaetzlich ueber WebDAV an (Port `webdav_port`, Standard 8102) - fuer Handy-Apps, den macOS-Finder, Linux-Dateimanager und, ueber einen Reverse Proxy mit HTTPS, fuer Windows und den Zugriff von unterwegs. `http://HA-IP:8102/` zeigt die Freigaben, die der angemeldete Benutzer oeffnen darf. Anmeldung mit den Samba-Benutzern und ihren Passwoertern, ohne neue Einrichtung; es gelten dieselben Rechte wie bei Samba. Oeffentliche Freigaben verlangen hier trotzdem eine Anmeldung. Geloeschtes landet im Papierkorb der Freigabe, Symlinks werden nicht verfolgt, zehn Fehlversuche in 15 Minuten sperren IP und Benutzernamen. Der Einstellungen-Tab zeigt Stand und Adressen.
+- **Fix: Papierkorb-Karte im Einstellungen-Tab.** Seit 3.12.0 trugen ihre Texte dieselben Namen wie die der externen Backups, die Karte hiess deshalb "Externe Backups". Schlimmer: Schalter und Tage-Feld riefen die Speichern-Funktion der externen Backups auf, die Papierkorb-Einstellung liess sich ueber die Oberflaeche nicht aendern (es galten die Standardwerte: an, 30 Tage).
+- Die Beschreibung von `web_port` sagt jetzt richtig, dass der Oeffnen-Knopf seit 3.13.0 unabhaengig davon funktioniert.
+
+## 3.13.1
+- Ingress-Port ueber `bashio::app.ingress_port` statt des veralteten `bashio::addon.ingress_port` (die Warnung im Log ist weg). Laesst sich der Port nicht ermitteln, sagt das Log jetzt deutlich, dass "Oeffnen" nicht geht und die Oberflaeche unter `http://HA-IP:web_port` erreichbar ist.
+
+## 3.13.0
+- **Time Machine** (Issue #11): Jede Freigabe laesst sich im Freigabe-Dialog als Backup-Ziel fuer Macs einschalten, auf Wunsch mit Groessenbegrenzung in GB. Macs finden sie per Bonjour (`_adisk._tcp`) von selbst unter *Backup-Volume hinzufuegen*. Fuer solche Freigaben ist der Papierkorb aus, sonst liefe er mit alten Backup-Daten voll. Am besten auf einem ext4-Laufwerk; exFAT/FAT taugen nicht.
+- **Windows findet die NAS wieder unter "Netzwerk"** (Issue #13): wsdd lauscht nur noch an der LAN-Schnittstelle (Standardroute). Auf allen Schnittstellen erreichten die Ankuendigungen unter Home Assistant OS oft das LAN nicht. Fix von @mirican.
+- **Kein Ingress-Konflikt mehr mit anderen Add-ons im Host-Netz** (Issue #10): Den Ingress-Port vergibt jetzt Home Assistant (`ingress_port: 0`), bisher war er fest 8100 und kollidierte z. B. mit Dnsmasq-DHCP - "Oeffnen" zeigte dann das andere Add-on. Der Direktzugriff ueber `web_port` (Standard 8100) bleibt unveraendert; ist der Port belegt, laeuft "Oeffnen" trotzdem.
+- **XFS-Laufwerke** (Issue #16): Statt "Mount fehlgeschlagen" erklaert Simple NAS jetzt, dass Home Assistant OS XFS nicht im Kernel hat und ein Add-on das nicht nachruesten kann, mit dem Ausweg ext4.
+
+## 3.12.1
+- **Backups bremsen Home Assistant nicht mehr aus.** restic und rclone (externe Backups) sowie rsync (Datei-Backup-Jobs) laufen jetzt mit niedrigster CPU- und Festplatten-Prioritaet (`nice 19`, I/O-Klasse *idle*), restic und rclone ausserdem nur noch auf zwei Kernen weniger als vorhanden (auf dem Raspberry Pi 5: 2 von 4). Bisher lag ein grosses restic-Backup mit allen Kernen bei 100 % CPU, gleichberechtigt mit Home Assistant. Ein Backup dauert dadurch etwas laenger, Home Assistant, Samba und die anderen Add-ons haben aber immer Vorrang.
+
+## 3.12.0
+- **Papierkorb fuer Netzwerkfreigaben.** Windows, macOS und Linux loeschen auf einer Samba-Freigabe sofort endgueltig, Nautilus fragt nur noch "Soll sie sofort geloescht werden?". Jetzt verschiebt Simple NAS alles, was ueber das Netzwerk geloescht wird, in den versteckten Ordner `.recycle` der Freigabe, samt Ordnerstruktur (Samba-Modul `vfs_recycle`). Zum Wiederherstellen die Datei einfach zurueckschieben, ueber die Freigabe (versteckte Dateien einblenden) oder im Dateien-Tab. Gibt es eine Datei dort schon, heisst die neue "Copy #1 of ...". Temporaere Dateien (`*.tmp`, `~$*`, `.~lock.*#`, `*.part`, `*.crdownload`) landen nicht im Papierkorb.
+- **Einstellungen-Tab, Karte "Papierkorb fuer Netzwerkfreigaben":** ein- und ausschalten (Standard: an), Aufbewahrung in Tagen (Standard 30), Belegung je Freigabe und **Leeren** je Freigabe. Simple NAS loescht alle paar Stunden, was laenger als die eingestellten Tage im Papierkorb liegt. Gilt fuer beschreibbare Freigaben.
+- Ein `.recycle`-Ordner, der schon vor dem Einschalten existierte (etwa von einer frueheren Samba-Einrichtung), wird nie automatisch geleert, nur mit **Leeren**.
+- Datei-Backup-Jobs, restic und rclone sichern den Papierkorb nicht mit.
+- Grenze: Der Papierkorb liegt im Freigabe-Ordner. Ein Laufwerk, das *unterhalb* einer Freigabe eingehaengt ist, kann nicht dorthin verschieben; Samba loescht dort weiterhin endgueltig. Am besten jede Platte als eigene Freigabe anlegen.
+
+## 3.11.2
+- **Fix: Ordner kopieren scheiterte immer mit "File exists".** Der Ordner-Auswahlknopf im Dialog *Kopieren* traegt den Zielordner selbst ein, und der Server versuchte, den kopierten Ordner unter genau diesem Namen anzulegen - den es ja schon gab. Ein bestehender Ordner als Ziel heisst jetzt "dort hinein", wie bei `cp` und `mv`; ein Pfad, den es noch nicht gibt, ist weiterhin der neue Name der Kopie. Das Zielfeld ist mit dem aktuellen Ordner vorbelegt statt mit der Quelle selbst.
+- **Kopieren und Verschieben ueberschreiben nichts mehr.** Liegt am Ziel schon etwas mit demselben Namen, kommt "„Name“ existiert bereits in Ordner" statt der rohen Python-Meldung. Bisher ersetzten das Kopieren einer Datei und das Verschieben eine vorhandene Datei stillschweigend. Ein Ordner laesst sich nicht mehr in sich selbst kopieren oder verschieben.
+- **OK-Knopf waehrend des Kopierens gesperrt.** Grosse Ordner brauchen eine Weile, und bisher war nichts zu sehen. Ein zweiter Klick startete die Kopie erneut und scheiterte an dem Ordner, den der erste Durchlauf schon angelegt hatte.
+
+## 3.11.1
+- **Parallele Verbindungen fuer externe Backups, einstellbar.** Neues Feld **Parallele Verbindungen** unter *Erweitert* (1-16, Standard 8). restic laedt damit ueber 8 statt 5 Verbindungen gleichzeitig hoch (`-o rclone.connections`), rclone mit 8 statt 4 (`--transfers`); gilt auch fuer Pruefen, Aufraeumen und Wiederherstellen. Ein einzelner SFTP-Strom fuellt die Leitung selten aus. Eine Hetzner Storage Box erlaubt 10 gleichzeitige Verbindungen - dort hoechstens 8 einstellen und bei Abbruechen verringern. Bestehende Jobs bekommen automatisch 8.
+- **Ziel nach dem ersten Backup fixiert.** Backup-Programm, Anbieter, Server, Benutzer, Port, Ordner und Verschluesselung sind gesperrt, sobald ein Backup gelaufen ist. Erst **Ziel aendern ...** entsperrt sie und erklaert vorher die Reihenfolge: zuerst die Daten beim Anbieter verschieben bzw. den Ordner umbenennen, dann hier eintragen, dann *Verbindung testen*, danach das Notfallblatt neu drucken. Bisher konnte man den Ordner einfach aendern - das naechste Backup begann dann am neuen Ort unbemerkt ein zweites Archiv von vorn. Zugangsdaten (z. B. das Box-Passwort) bleiben jederzeit aenderbar.
+- **Verbindungstest legt nach einer Ziel-Aenderung nichts mehr an.** Ist das Ziel eines Jobs mit Backups geaendert, sucht der Test am neuen Ort nach den gesicherten Daten und meldet einen Fehler, wenn dort keine liegen. Bisher legte er den leeren Ordner an und meldete "Verbindung ok".
+
+## 3.11.0
+- **Notfallblatt fuer externe Backups.** Neuer Knopf **Notfallblatt** an jedem Job: eine druckbare Seite mit allem, was man braucht, um die Daten ohne Home Assistant zurueckzuholen - wo sie liegen (Anbieter, Server, Benutzer, Pfad), das **Archiv-Passwort** Zeichen fuer Zeichen (verwechselbare Zeichen wie `l`/`I`/`1` und `O`/`0` sind beschriftet), was gesichert wird, und die Wiederherstellung: mit dem Notfall-Paket oder von Hand mit einer rclone-Konfiguration samt restic-Befehlen. Zugangsdaten des Anbieters (Box-Passwort, S3-Secret, Schluessel, eigene rclone-Konfiguration) stehen bewusst **nicht** darauf - die lassen sich beim Anbieter neu setzen, das Archiv-Passwort nicht. Abrufbar mit derselben Anmeldung wie "Passwort anzeigen", wird nicht zwischengespeichert; jeder Abruf steht im Log.
+- **Notfall-Paket** (Ordner `notfall/` im Repository): `bash notfall/paket-bauen.sh` baut ein ZIP mit restic und rclone fuer Windows und Linux (gegen die offiziellen Pruefsummen geprueft) und einem Wiederherstellungs-Tool mit Tastatureingabe. Auf einem beliebigen PC auspacken und starten, Zugangsdaten eintippen (Passwoerter werden nirgends gespeichert), Stand waehlen, alles oder einen Ordner wiederherstellen - ohne Installation. Fuer restic-Jobs auf einer Hetzner Storage Box oder einem SFTP-Server mit Passwort.
+
+## 3.10.4
+- **Pruefung eines restic-Archivs scheitert nicht mehr an einer verwaisten Sperre.** Wurde ein Backup durch einen Neustart oder ein Update des Add-ons abgebrochen, blieb seine Sperre im Archiv liegen, und jede Pruefung endete mit "Exit 11: lock was created at ..." - bis zum naechsten Backup. Vor `restic check` laeuft jetzt wie vor jedem Backup `restic unlock`. Das entfernt nur verwaiste Sperren, nie die eines laufenden Backups.
+
+## 3.10.3
+- **SMART nur noch auf Anforderung.** Die Uebersicht fragt SMART nicht mehr beim Laden und alle 5 Minuten fuer alle Platten ab, sondern nur noch per Knopf **Aktualisieren** bzw. beim Oeffnen des SMART-Dialogs. Ergebnisse werden 30 Minuten zwischengespeichert, es laeuft immer nur eine Abfrage gleichzeitig, und eine Platte, die gerade arbeitet, wird nicht abgefragt (Meldung "Platte arbeitet gerade"). Hintergrund: ATA-Pass-Through-Befehle waehrend Schreiblast koennen USB-SATA-Bridges (z. B. ASMedia) haengen lassen und USB-Resets ausloesen.
+- **Keine herstellerspezifischen USB-Bridge-Modi mehr.** smartctl versucht nur noch die automatische Erkennung und `-d sat`. Die Modi `scsi`, `usbjmicron`, `usbprolific` und `usbsunplus` senden auf nicht passenden Bridges Fremdbefehle und wurden entfernt. Bei einem Timeout wird die Platte nicht weiter befragt. Der Exit-Status wird jetzt als Bitmaske ausgewertet (nur Aufruf- oder Oeffnen-Fehler zaehlen als Fehlschlag). zram, loop und ram werden nicht mehr abgefragt.
+- **"Samba neu starten" bricht keine laufenden Uebertragungen mehr ungefragt ab.** Sind Dateien geoeffnet (z. B. ein laufendes HA-Backup auf die Freigabe), fragt die Oberflaeche erst nach. Samba wird sanft beendet (SIGTERM, bis zu 10 s warten) statt mit `kill -9`.
+- **ext4 wird mit `noatime,errors=remount-ro` eingehaengt.** Kein Schreibzugriff mehr bei jedem Lesen; bei einem Dateisystemfehler wird das Dateisystem schreibgeschuetzt, statt still weiterzuschreiben (ext4-Standard war `errors=continue`). Gilt ab dem naechsten Einhaengen.
+- **Statusdatei der Freigabe-Sperren** (`share_locks.json`) wird nur noch bei Aenderungen (spaetestens jede Minute) und ohne `fsync` geschrieben statt alle 2 Sekunden mit erzwungenem Schreiben auf die Systemplatte.
+- **Einhaengen beim Start wartet laenger auf USB-Platten.** Der Wiederholversuch erkennt jetzt auch die Meldung "kein Block-Device" und wartet bis zu ca. 2 Minuten (24 x 5 s) statt 15 Sekunden; bisher war der erste Fehlschlag endgueltig.
+
+## 3.10.2
+- **Unterbrochene externe Backups laufen nach einem Neustart weiter.** Wird ein Backup durch einen Neustart von Home Assistant oder ein Update des Add-ons abgeschnitten, reiht Simple NAS es beim naechsten Start (nach 2 Minuten) automatisch wieder ein. restic und rclone ueberspringen dabei, was schon beim Anbieter liegt. Bisher galt der geplante Termin als erledigt - ein woechentlicher Job waere erst eine Woche spaeter weitergelaufen. Selbst abgebrochene Laeufe werden nicht wieder aufgenommen.
+
+## 3.10.1
+- **Fix: Hetzner Storage Box meldete "unable to authenticate, attempted methods [none]".** Das Add-on nutzte fest Port 23, der bei Hetzner nur mit eingeschaltetem "SSH-Support" antwortet. Jetzt ist Port 22 (reines SFTP, funktioniert immer) der Standard; Port 23 ist im Job waehlbar. Bestehende Hetzner-Jobs nutzen automatisch Port 22.
+- **Verstaendliche Fehlermeldungen.** Statt der rohen rclone/restic-Ausgabe steht vorne ein Hinweis in Klartext (Anmeldung abgelehnt, Server nicht gefunden, Zeitueberschreitung, Bucket fehlt, falsches Archiv-Passwort ...), die Details dahinter. Der rclone-Hinweis zur Host-Key-Pruefung wird nicht mehr mit ausgegeben.
+- **"Pruefen" erst nach dem ersten Backup.** Der Knopf erscheint erst, wenn ein Archiv existiert; vorher sagt der Server, dass zuerst gesichert werden muss.
+
+## 3.10.0
+- **Externe Backups mit restic oder rclone.** Neuer Bereich im Backup-Tab: `/share`, `/media` oder beliebige Ordner werden auf eine Hetzner Storage Box, zu S3 (Hetzner Object Storage, Wasabi, AWS, MinIO, Cloudflare R2 ...), Backblaze B2, auf einen SFTP-Server, in eine WebDAV-Cloud (Nextcloud, ownCloud), auf ein anderes NAS per SMB oder auf eine zweite Platte gesichert - oder zu jedem anderen rclone-Anbieter (OneDrive, Google Drive, Dropbox ...) ueber eine eingefuegte rclone-Konfiguration.
+- **Pro Job waehlbar:** restic (verschluesseltes Archiv mit Staenden, ohne Dubletten; Aufbewahrung je Tag/Woche/Monat) oder rclone (Dateien 1:1 beim Anbieter, optional verschluesselt; ersetzte und geloeschte Dateien landen in `.versions/<Datum>/` und werden nach N Tagen geloescht).
+- **Zeitplan** taeglich oder woechentlich zu einer festen Uhrzeit; ein verpasster Lauf (HA war aus) wird beim naechsten Start einmal nachgeholt. Es laeuft immer nur ein Job, die anderen warten.
+- **Fortschritt, Abbrechen, Protokoll, Verbindung testen, Pruefen (restic)** und **Wiederherstellen** im Browser: Stand waehlen, Datei oder Ordner auswaehlen, Zielordner angeben.
+- **Leere Quellen stoppen den Lauf.** Fehlt ein Quellordner oder ist er leer (z. B. abgezogene USB-Platte), wird nichts gesichert - sonst wuerde rclone die Kopie loeschen und restic die guten Staende nach und nach aussortieren.
+- **Benachrichtigung in Home Assistant**, wenn ein Backup fehlschlaegt (neu: `homeassistant_api`); der naechste erfolgreiche Lauf entfernt sie.
+- Zugangsdaten liegen in `/data/remote_backup/` (Modus 600) und sind Teil der reinstall-sicheren Kopie unter `/config/.simplenas/auto` - ohne das Archiv-Passwort waere ein restic-Backup nach einer Neuinstallation wertlos. Die abgeschottete Freigabe-Seite sieht den Ordner nicht (Sandbox-Maske, wird jetzt auch angelegt, wenn er beim Start noch fehlt). Der restic-Cache (`/data/cache`) bleibt aus HA-Backups heraus.
+- Das Image enthaelt jetzt `restic` und `rclone`.
+
+## 3.9.7
+- **Brute-Force-Schutz fuer den Admin-Login.** Bisher liess `/login` der Admin-Oberflaeche beliebig viele Versuche zu. Jetzt: nach 10 Fehlversuchen je Besucher-IP oder 20 je Benutzername (ueber alle IPs, gegen verteilte Angriffe) in 15 Minuten wird gesperrt - erst 15 Minuten, bei Wiederholung doppelt so lange, hoechstens 24 Stunden. Waehrend der Sperre wird auch das richtige Passwort abgewiesen (HTTP 429 mit `Retry-After`). Jeder Fehlversuch dauert zusaetzlich 0,3-0,7 s. Sperren stehen im Addon-Log (`[AUTH LOCK]`).
+- **Ueber Home Assistant (Ingress) wird nie gesperrt.** Wer dort angemeldet ist, ist kein Angreifer von aussen - so kommst du immer hinein, auch wenn ein Angriff das Konto auf dem Weg ueber die eigene Domain gesperrt hat.
+- **Echte Besucher-IP hinter Cloudflare.** Die Admin-Oberflaeche liest die Besucher-Adresse jetzt wie die Freigabe-Seite: `CF-Connecting-IP` bzw. `X-Forwarded-For` nur, wenn die Anfrage von einem Proxy aus `share_trusted_proxies` kommt (Nginx Proxy Manager / cloudflared im Supervisor-Netz). Bisher wurde `X-Forwarded-For` ungeprueft uebernommen - damit haette sich jede IP-Sperre per erfundenem Header umgehen lassen, und hinter dem Cloudflare-Tunnel haetten alle Besucher dieselbe IP gehabt.
+- **Neue Option `admin_ingress_only`** (Standard aus): Die Admin-Oberflaeche antwortet dann nur noch ueber den Oeffnen-Knopf in Home Assistant; direkter Zugriff ueber `http://HA-IP:8100` und ueber Proxy/Cloudflare bekommt 403. Nicht einschalten, wenn du die Admin-Oberflaeche ueber eine eigene Domain nutzt.
+
+## 3.9.6
+- **Freigabe-Seite als App installierbar (Icon auf dem Android-Startbildschirm).** Die Freigabe-Seite ist jetzt eine installierbare Web-App: In Chrome auf Android erscheint im Menue **App installieren** bzw. **Zum Startbildschirm hinzufuegen**. Jeder Link wird als eigene App mit seinem Namen installiert und startet direkt auf dem Link; die Portal-Seite `/` wird als "Simple NAS" installiert und fuehrt zu "Meine Freigaben". Die App oeffnet ohne Browserleiste.
+- Neue Endpunkte: `/manifest.webmanifest`, `/sw.js`, `/app-icon-192.png`, `/app-icon-512.png` sowie je Link `/s/<token>/manifest.webmanifest` und `/s/<token>/sw.js`. Manifest und Service Worker sind ohne Anmeldung abrufbar (Chrome laedt das Manifest ohne Cookies), liefern aber nur den Link-Namen, den die Entsperrseite ohnehin zeigt - und nur fuer gueltige Links; alles andere bleibt 404. Die Dateien selbst bleiben hinter der Anmeldung.
+- Der Service Worker speichert nichts zwischen. Er faengt nur Seitenaufrufe ab, um ohne Verbindung eine Meldung statt der Browser-Fehlerseite zu zeigen; Uploads, Downloads, ZIP, Vorschau und Editor laufen unberuehrt am Service Worker vorbei.
+- Funktioniert nur ueber HTTPS.
+
+## 3.9.5
+- **Fix: Grosse Dateien liessen sich im Dateimanager nicht hochladen.** Jede Datei ging in einer einzigen Anfrage hoch. Hinter Cloudflare (kostenloser Tarif) wird eine Anfrage ueber 100 MB abgewiesen, bevor sie Home Assistant erreicht - im Addon-Log stand nichts, und die Seite zeigte waehrend des Hochladens nichts an, auch keinen Fehler. Jetzt geht jede Datei in Stuecken zu 8 MB hoch, mit Fortschrittsbalken (Prozent und MB) und Wiederholung bei kurzen Verbindungsabbruechen. Die Teile sammeln sich als `.upload-*.part` im Zielordner und werden am Ende umbenannt; eine vorhandene Datei wird nie ueberschrieben. Fehler bleiben 10 Sekunden stehen und nennen bei einer Proxy-Fehlerseite den HTTP-Status statt eines JSON-Fehlers. Waehrend ein Upload laeuft, fragt der Browser beim Verlassen der Seite nach.
+- **Fix: Ordnerauswahl mit einer Datei als Pfad.** `/api/browse` antwortete mit einem Absturz (500, Traceback im Log), wenn der Pfad auf eine Datei zeigte. Jetzt kommt eine klare Meldung (400).
+
+## 3.9.4
+- **Korrekte Beschreibungen in den Addon-Optionen.** Das Admin-Passwort wird nicht "verschluesselt", sondern nur als Hash gespeichert - der Text sagt das jetzt auch. Beim Collabora-Feld "Adresse, unter der Collabora Simple NAS erreicht" stand als Beispiel Port 8097, richtig ist der Standard-Port der Freigabe-Seite 8101.
+- **Dokumentation:** Die Automatisierung "Freigaben nach HA-Neustart wieder verbinden" nutzt jetzt die eingebaute Aktion `hassio.addon_restart`. Der bisherige `rest_command` auf `/api/samba/restart` konnte nicht mehr funktionieren, weil aendernde API-Aufrufe ein CSRF-Token (sonst 403) und bei aktivem Admin-Passwort eine Anmeldung (sonst 401) brauchen. Ausserdem: Dateibaum fuer die lokale Installation vervollstaendigt.
+
+## 3.9.3
+- **Dateisymbole wie im Explorer.** Dateimanager und Freigabe-Seite zeigen je Dateityp ein eigenes Symbol: Word (blau W), Excel (gruen X), PowerPoint (orange P), PDF, Bilder, Videos, Musik, Archive, Text, Code, Programme, E-Mail, dazu gelbe Ordner. Eigene Zeichnungen statt Herstellerlogos, direkt im HTML, eine gemeinsame Quelle (`app/fileicons.py`) fuer beide Oberflaechen.
+
+## 3.9.2
+- **Dunkelmodus-Schalter auf der Freigabe-Seite.** Oben rechts wechselt ein Knopf zwischen hell und dunkel; die Wahl merkt sich der Browser, ohne Wahl folgt die Seite weiter der Geraete-Einstellung. Gilt auch fuer die Collabora-Editor-Seite.
+- **Zurueck zu "Meine Freigaben".** Wer mit einem Freigabe-Konto angemeldet ist, hat auf jeder Link-, Ordner- und Editor-Seite ganz oben einen Link zurueck zur Auswahlseite.
+
+## 3.9.1
+- **Fix: Der Download-Knopf im Dateimanager tat nichts (seit 3.0.9).** Der Regex `/\/+$/` stand in einem JavaScript-String fuer das `onclick`-Attribut; dort verliert er die Backslashes, das Attribut enthielt `//+$/` - ein Kommentar - und der Handler brach mit einem SyntaxError ab, ohne eine Anfrage zu senden. Der Knopf ruft jetzt eine benannte Funktion auf.
+- **Loeschen auf der Freigabe-Seite.** Neuer Link-Schalter **Loeschen erlauben** (Standard aus): Besucher sehen dann bei Dateien und Ordnern einen Loeschknopf und muessen vorher bestaetigen. Nicht bei Ablage- und Einzeldatei-Links, nie die Link-Wurzel selbst, keine versteckten Dateien oder Symlinks, nur mit CSRF-Token. Eine gerade in Collabora geoeffnete Datei (oder ein Ordner mit einer solchen) wird nicht geloescht. Jeder Loeschvorgang steht im Zugriffsprotokoll.
+- **Fix: Ablage hochgeladener Dateien.** Links ohne gespeicherte Ablage-Einstellung (vor deren Einfuehrung angelegt) zeigten im Dialog "Direkt im Ordner", der Server legte aber Tagesordner an. Beide nutzen jetzt dieselbe Vorgabe. "Unterordner je Konto" wurde bei Passwort- und oeffentlichen Links stillschweigend ignoriert; der Dialog lehnt diese Kombination jetzt mit einer Meldung ab.
+- **Fix: CrowdSec stand nach jedem Neustart von Simple NAS auf "nicht aktiv".** Bei abgeschotteter Freigabe-Seite schreibt der Worker das Protokoll und ein Kopier-Thread reicht es an CrowdSec weiter. Die Statusanzeige fragte aber nur, ob der Hauptprozess selbst in die Datei schreibt - das ist dort nie der Fall. Das Weiterreichen lief also, nur die Anzeige verlangte einen Klick auf "CrowdSec einrichten". Die Anzeige erkennt den Kopier-Thread jetzt; der Knopf richtet im abgeschotteten Betrieb den Kopier-Thread aus, statt einen Protokoll-Handler anzulegen, der nie eine Zeile bekommt, und startet keinen zweiten.
+
+## 3.9.0
+- **Collabora Online eingebunden: Office-Dateien auf der Freigabe-Seite im Browser oeffnen und bearbeiten.** Mit `collabora_enabled` und `collabora_url` zeigt die Freigabe-Seite bei docx, xlsx, pptx, odt und allen weiteren Typen, die der Collabora-Server meldet, einen Knopf zum Oeffnen. Bearbeiten und Speichern gibt es nur bei Links mit dem neuen Schalter **Bearbeiten mit Collabora erlauben** (Standard aus, nicht bei reinen Ablage-Links), alle anderen oeffnen schreibgeschuetzt. Gespeichert wird direkt in die Datei im Ordner; Besitzer und Rechte fuer Samba bleiben erhalten.
+- Simple NAS ist dafuer WOPI-Host (`/wopi/files/...` auf dem Port der Freigabe-Seite): Zugangs-Tokens gelten nur fuer einen Link, eine Datei und ein Konto, laufen nach `share_session_hours` ab und werden bei jedem Aufruf erneut geprueft - ein deaktivierter Link, ein neuer Token, ein geaendertes Passwort oder ein gesperrtes Konto beenden auch eine offene Editor-Sitzung. Die Aufrufe muessen mit dem Proof-Key des eingestellten Collabora-Servers signiert sein (`collabora_verify_proof`, reines Python, kein zusaetzliches Paket). Sperren ueberleben einen Neustart, und eine Datei, die zwischendurch per Samba geaendert wurde, loest in Collabora eine Rueckfrage aus statt ueberschrieben zu werden.
+- Nur die Editor-Seite darf den Collabora-Server einbetten; alle anderen Seiten behalten die strikte Content-Security-Policy.
+- Neue Optionen fuer Sonderfaelle: `collabora_internal_url` (Dateitypen ueber eine interne Adresse abfragen, etwa wegen einer Cloudflare-Pruefung), `collabora_wopi_url` (Adresse, unter der Collabora Simple NAS erreicht), `collabora_verify_tls`. Im Reiter Teilen zeigt eine neue Zeile den Collabora-Status mit Test-Knopf.
+- Bei einem geaenderten Ordner oder einer geaenderten Einzeldatei eines Links enden jetzt ebenfalls alle Sitzungen dieses Links.
+
+## 3.8.1
+- Fix zur Abschottung: In der Sandbox schrieb der Worker seine Zaehler und den Sperren-Schnappschuss nicht (das atomare Ersetzen scheiterte an den eingehaengten Einzeldateien), und Aenderungen der Verwaltung erreichten ihn nicht. Das Jail laesst `/data` jetzt echt und blendet nur die geheimen Dateien (admin_auth.json, options.json, samba/) einzeln aus. Sperren-Karte, Zaehler und Live-Aenderungen an Links funktionieren damit auch abgeschottet.
+
+## 3.8.0
+- **Die oeffentliche Freigabe-Seite laeuft jetzt abgeschottet (Plan-Schritt 9).** Sie ist ein eigener Prozess, der auf den unprivilegierten Nutzer `nobody` faellt, `SYS_ADMIN`/`SYS_RAWIO` und alle bis auf die fuer Uploads noetigen Datei-Rechte ablegt und in einem Mount-Namespace sitzt, in dem `/config`, `/ssl`, `/addon_configs`, `/backup` und die geheimen Dateien unter `/data` (Admin-Passwort, Samba-Passwortdatenbank, Backups) gar nicht vorhanden sind. Eine Codeausfuehrungsluecke im aus dem Internet erreichbaren Teil erreicht damit nur noch die freigegebenen Ordner, nicht mehr den Home-Assistant-Host. Neue Option `share_sandbox`: `auto` (Standard, mit Rueckfall auf den Hauptprozess, falls die Abschottung nicht einrichtbar ist), `on` (erzwingen) oder `off` (wie frueher). Die Verwaltung liest Sperren und Zugriffsprotokoll des Worker-Prozesses ueber kleine Dateien und reicht Entsperr-Wuensche genauso zurueck.
+- **Fix (Sicherheit): ein gerade rotierter Token blieb kurz gueltig, ein gerade angelegter Link antwortete kurz mit 404.** Der Token-Index war auf die sekundengenaue Aenderungszeit der Datei zwischengespeichert; beim Erneuern (gleiche Dateigroesse, gleiche Sekunde) fiel die Aenderung durchs Raster. Der Index wird nun bei jeder Anfrage frisch aus der Datei gebaut - immer korrekt, auch zwischen Verwaltungs- und Worker-Prozess.
+
+## 3.7.5
+- **CrowdSec bekommt sein Protokoll auch dann, wenn `share_log_export_path` woanders hinzeigt.** Steht in der Option ein Ordner, den das CrowdSec-Addon nicht sieht (alles ausserhalb von `/config`, insbesondere `/share`), schreibt Simple NAS die Datei weiterhin dorthin *und* zusaetzlich nach `/config/.simplenas/share_access.log`, worauf die Acquisition zeigt. Vorher lief CrowdSec mit "No matching files for pattern" ins Leere. Der Reiter Teilen nennt jetzt die Datei, aus der CrowdSec liest, und weist darauf hin, dass die Option leer bleiben kann.
+- Das Zugriffsprotokoll kann mehrere Ziele parallel bedienen (`accesslog.set_export(..., slot=...)`). Zwei Slots auf derselben Datei werden zusammengefasst, weil zwei rotierende Handler auf einem Pfad sich gegenseitig die Rotation zerlegen.
+- Das Logo aus der Kopfzeile dient jetzt auch als Favicon im Browser-Tab (Oberflaeche, Login und Einrichtungsseite). Die oeffentliche Freigabe-Seite bekommt bewusst keines: ein wiedererkennbares Symbol wuerde verraten, welche Software dort antwortet.
+- Die Auto-Sicherung nach `/config/.simplenas/auto` laeuft nur noch, wenn das Addon wirklich aus `/data` startet. Testlaeufe und Handstarts auf einem Arbeitsplatzrechner haben sonst in ein fremdes `/config` geschrieben.
+
+## 3.7.4
+- **Fix: abgewiesene Streams verloren das Urteil von clamd.** Ueberschreitet eine Datei `StreamMaxLength`, antwortet clamd sofort mit "INSTREAM size limit exceeded" und legt auf, waehrend das Addon noch sendet. Der darauf folgende Schreibfehler ueberschrieb die bereits eingetroffene Antwort mit einem allgemeinen Fehler - und mit `share_clamav_on_error: reject` wurde der Upload dann kommentarlos abgelehnt, statt ueber den Pfad-Scan doch noch geprueft zu werden. Der Client achtet jetzt nach jedem Block auf eine wartende Antwort, bricht dann ab und wertet sie aus. Nebeneffekt: grosse Dateien werden nicht mehr vollstaendig in einen Socket geschoben, der laengst nicht mehr gelesen wird.
+
+## 3.7.3
+- **Fix: CrowdSec sah das Zugriffsprotokoll nie.** Der Standardpfad lag unter `/share`, das in das CrowdSec-Addon gar nicht eingebunden ist - CrowdSec meldete beim Start "No matching files for pattern" und keines der Szenarien konnte je ausloesen. Neuer Standard ist `/config/.simplenas/share_access.log`; die Konfigurationsordner von Home Assistant sehen beide Addons. Bestehende Installationen ziehen beim Start automatisch um, die Acquisition-Datei wird dabei mitgeschrieben. Danach das CrowdSec-Addon einmal neu starten.
+- **Sperren sind jetzt sichtbar.** Die Karte "Oeffentliche Freigabe-Seite" zeigt laufende Sperren mit Restzeit und die aktuellen Fehlversuche je Adresse im Verhaeltnis zur Schwelle (10 in 15 Minuten). Wer sich fuenfmal falsch anmeldet, sieht jetzt "ip 1.2.3.4: 5/10" statt gar nichts. Ein Klick auf eine Sperre hebt sie auf.
+- **Warnung, wenn die Virenpruefung eingeschaltet, clamd aber nicht erreichbar ist.** Mit `share_clamav_on_error: reject` wird in dieser Lage jeder Upload abgelehnt, bisher ohne sichtbaren Hinweis. Der Status prueft clamd jetzt selbst (gecacht) und die Karte warnt in rot.
+
+## 3.7.2
+- "CrowdSec einrichten" braucht keine Option mehr: Ist `share_log_export_path` leer, schreibt das Addon das Zugriffsprotokoll ab sofort zusaetzlich nach `/share/simplenas/share_access.log`, merkt sich das in `/data/crowdsec_setup.json` und traegt genau diesen Pfad in die CrowdSec-Acquisition ein. Kein Neustart von Simple NAS noetig, nur das CrowdSec-Addon muss einmal neu starten. Eine gesetzte Option hat weiterhin Vorrang.
+
+## 3.7.1
+- Fix: "Speichern fehlgeschlagen: Missing option 'share_clamav_timeout'" beim Speichern der Addon-Konfiguration. Alle Freigabe- und Dateizugriffs-Optionen sind im Schema jetzt optional; das Addon hat fuer jede einen eingebauten Standardwert. Ein Konfigurationsformular, das noch vor einem Update geladen wurde, laesst sich damit speichern, ohne dass der Supervisor neue Optionen vermisst.
+
+## 3.7.0
+- **CrowdSec-Anbindung.** Das Addon bringt Parser, drei Szenarien und eine Acquisition-Datei fuer CrowdSec mit und installiert sie per Knopf im Reiter Teilen in die Konfiguration des CrowdSec-Addons (beide sehen `/config`). Szenarien: `simplenas/share-bf` (5 Fehlpasswoerter in ~50 s), `simplenas/share-scan` (10 unbekannte Links in ~5 min), `simplenas/share-locked` (das Addon hat die Adresse selbst gesperrt). Bans erreichen damit den Firewall-Bouncer.
+- Neue Option `share_log_export_path`: zweite Kopie des Zugriffsprotokolls an einem Ort, den CrowdSec lesen kann, z. B. `/share/simplenas/share_access.log`.
+- Jede Protokollzeile traegt zusaetzlich `time` als RFC3339-Zeitstempel, damit CrowdSec sie ohne eigene Zeitlogik verarbeiten kann.
+- DOCS: Abschnitt zur CrowdSec-Einrichtung, inklusive des Hinweises, dass Bans fuer den Cloudflare-Tunnel ueber den Cloudflare-Bouncer laufen muessen.
+
+## 3.6.1
+- Uploads ueber Links mit Modus "Beides" landen jetzt direkt in dem Ordner, in dem man gerade blaettert, statt in einem Unterordner mit Datum. Reine Ablage-Links sortieren weiterhin nach Tag.
+- Die Ablageart ist im Link-Dialog waehlbar: direkt im Ordner, Unterordner je Tag, Unterordner je Konto.
+- Nach dem Hochladen zeigt die Seite den Zielpfad an und laedt die Dateiliste neu.
+
+## 3.6.0
+- **Virenpruefung beim Upload ueber das ClamAV-Addon.** `share_clamav_enabled: true`, clamd unter `share_clamav_host:share_clamav_port` (Vorgabe 127.0.0.1:3310, TCP-Socket im ClamAV-Addon einschalten). Uploads werden vor dem Ablegen gestreamt geprueft; Funde werden abgewiesen und protokolliert. Ist clamd nicht erreichbar, wird abgelehnt (`share_clamav_on_error`, umstellbar). Dateien ueber clamds Stromgrenze (25 MB) werden per Pfad-Modus geprueft; scheitert auch das, entscheidet `share_clamav_large_file`. Im Reiter Teilen gibt es einen Test-Knopf: PING plus EICAR-Testdatei.
+- **Schutz gegen Passwortraten verschaerft.** Sperren eskalieren: 15 Minuten beim ersten Mal, dann 30, 60, 120 ... bis 24 Stunden; nach einem Tag Ruhe beginnt die Reihe von vorn. Gilt je Adresse, je Link und je Konto, auch fuer das Portal.
+- **Link-Scanner werden ausgesperrt:** Wer in zehn Minuten zwanzig unbekannte Links probiert, wird fuer 15 Minuten (eskalierend) komplett blockiert.
+- **Link-Passwoerter brauchen mindestens 8 Zeichen.** Bisher war jede nicht-leere Eingabe erlaubt; ein vierstelliger Code waere trotz Sperren in Tagen zu erraten gewesen.
+
+## 3.5.1
+- **Hochladen aus dem Internet.** Links mit Modus "Hochladen" oder "Beides" zeigen auf der Freigabe-Seite einen Ablagebereich: Dateien hineinziehen oder auswaehlen, Fortschritt je Datei, Ergebnis mit endgueltigem Dateinamen. Ohne Javascript gibt es ein einfaches Formular.
+- Dateinamen werden entschaerft, ohne Umlaute zu zerstoeren: `Grüße.pdf` bleibt `Grüße.pdf`. Verzeichnisanteile, fuehrende Punkte, Steuerzeichen und Windows-Geraetenamen werden entfernt.
+- Nichts wird ueberschrieben: aus `a.txt` wird `a (2).txt`, angelegt mit exklusivem Erzeugen, damit dazwischen kein Symlink untergeschoben werden kann.
+- Gesperrte Endungen (`share_upload_blocked_ext`, Vorgabe: ausfuehrbare Dateien sowie HTML und SVG), optional eine Positivliste (`share_upload_allowed_ext`). Jede Endung der Kette zaehlt, `x.html.txt` ist gesperrt.
+- Groessenpruefung vor dem ersten gelesenen Byte gegen `share_max_upload_mb` (Vorgabe 1024) und die Grenzen des Links. Upload-Kontingent je Link, 30 Uploads je Stunde und Adresse.
+- Ablage nach Datum (`upload_subdir: by-date`, Vorgabe) haelt den Ordner uebersichtlich; hochgeladene Dateien gehoeren dem Ordner-Eigentuemer, damit Samba-Benutzer sie verwalten koennen.
+- Vorbereitet: ein Pruef-Haken fuer die Virenpruefung; die ClamAV-Anbindung folgt im naechsten Release.
+- (3.5.0 wurde ohne Versionssprung veroeffentlicht; dieses Release traegt die Aenderungen nach.)
+
+## 3.4.3
+- **Portal auf der Startseite der Freigabe-Seite.** Unter `/` steht jetzt eine Anmeldung mit dem Freigabe-Konto. Danach erscheint "Meine Freigaben": alle aktiven Links der Art "Nur bestimmte Konten", die dieses Konto oeffnen darf. Ohne Anmeldung verraet die Seite weiterhin nichts, weder Namen noch Adressen. Die Portal-Anmeldung gilt zugleich fuer die einzelnen Links.
+- Fehlversuche am Portal zaehlen gegen dieselben Sperren wie an den Links (je Adresse und je Konto).
+- **Echte Besucheradresse hinter Cloudflare.** Durch einen Cloudflare-Tunnel kam bisher nur die Adresse des Tunnel-Containers an; alle Besucher aus dem Internet teilten sich damit ein Anfragekontingent. Jetzt wird `CF-Connecting-IP` beachtet, aber nur von vertrauenswuerdigen Proxys.
+- Falsche HTTP-Methode auf bekannten Pfaden liefert dieselbe "nicht gefunden"-Seite statt einer Fehlerseite.
+
+## 3.4.2
+- Start der Freigabe-Seite prueft, ob `share_port` frei ist, und meldet sonst klar im Log, dass ein anderes Addon den Port belegt, statt es stillschweigend zu verdraengen.
+- Dokumentation und Optionstext zu `share_bind` korrigiert: Laeuft der Nginx Proxy Manager als Addon, muss `0.0.0.0` bleiben, denn dieses Addon erreicht das Loopback des Hosts nicht. Im Proxy-Host die LAN-IP des Hosts, Schema http und den Freigabe-Port eintragen. Ein Hinweis dazu erscheint auch im Addon-Log.
+
+## 3.4.1
+- **Ordner als ZIP herunterladen**, auf der Freigabe-Seite (Knopf ueber der Dateiliste, auch in Unterordnern) und im Dateimanager (neues Symbol an jedem Ordner). Das Archiv wird waehrend der Uebertragung gepackt, ohne Zwischendatei auf der Platte.
+- Vor dem ersten Byte wird der Ordner vermessen; ueber `share_zip_max_gb` (Vorgabe 5) oder `share_zip_max_files` (Vorgabe 10000) gibt es eine ordentliche Fehlerseite statt eines abgebrochenen Downloads.
+- Verschwindet eine Datei waehrend des Packens, bleibt das Archiv gueltig; sie steht in `_MISSING.txt`. Waechst der Ordner deutlich ueber die Messung hinaus, wird sauber geschlossen und `ZIP-INCOMPLETE.txt` erklaert es. Ein kurzes, gueltiges ZIP ist besser als ein abgeschnittenes.
+- Versteckte Dateien, `.part`-Dateien und Symlinks landen nie im Archiv. Standard ist Packen ohne Komprimierung (`share_zip_compress`), Fotos und Videos werden ohnehin nicht kleiner.
+- Jeder ZIP-Abruf zaehlt als ein Download und steht im Zugriffsprotokoll.
+
+## 3.4.0
+- **Die oeffentliche Freigabe-Seite ist da.** Eine zweite, eigenstaendige Anwendung auf Port 8101 (Option `share_port`), auf der ausschliesslich `/s/<link>` existiert. Verwaltung, Dateimanager und Samba-Einstellungen sind dort nicht erreichbar; das Addon verweigert den Start, sollte dort je etwas anderes registriert sein.
+- Sie startet nur mit `sharing_enabled: true` **und** gesetztem Admin-Passwort. run.sh und app.py pruefen das unabhaengig voneinander.
+- Links mit Passwort, Links fuer bestimmte Konten und offene Links; Blaettern in Unterordnern, Download mit Fortsetzen, Vorschau nur fuer Bilder, Video, Audio, PDF und Text. HTML und SVG werden nie inline ausgeliefert.
+- Unbekannte, deaktivierte, abgelaufene und erschoepfte Links sowie Links auf nicht eingehaengte Ordner zeigen dieselbe, byteweise identische Seite.
+- Sperren gegen Passwortraten: je IP (10 Fehlversuche in 15 Minuten), je Link (20, auch ueber viele Adressen verteilt), je Konto (10), 240 Anfragen je Minute und IP. Gesperrte Links zeigen im Reiter Teilen ein Etikett mit Entsperr-Knopf.
+- Zugriffsprotokoll `/data/share_access.log` (JSON-Zeilen, rotierend) mit Ansicht und Filtern im Reiter Teilen. Es enthaelt Link-IDs und relative Pfade, nie Tokens oder absolute Pfade.
+- Strenge Antwortkopfzeilen (CSP, X-Frame-Options, nosniff, Referrer-Policy, HSTS bei HTTPS), eigener Sitzungsschluessel und Cookie-Name, `X-Forwarded-*` nur von `share_trusted_proxies`.
+- Neue Optionen: `share_trusted_proxies`, `share_cookie_secure`, `share_session_hours`, `share_log_max_mb`. Kapitel "Sharing files on the internet" in DOCS.md mit der Einrichtung im Nginx Proxy Manager.
+- Noch nicht enthalten: Hochladen (Ablage-Links zeigen einen Hinweis) und Ordner als ZIP. Beides folgt.
+
+## 3.3.0
+- **Neuer Reiter "Teilen":** Links und Freigabe-Konten anlegen, bearbeiten, loeschen. Jeder Link hat einen Modus (Herunterladen, Hochladen, beides), eine Zugriffsart (Link + Passwort, nur bestimmte Konten, jeder mit dem Link), optional Ablaufdatum, Download-Limit, Upload-Kontingent und maximale Dateigroesse. Ein Link kann auch eine einzelne Datei sein.
+- Im Dateien-Reiter gibt es je Zeile ein Teilen-Symbol, das den Link-Dialog vorbefuellt.
+- Links bekommen ein 22-stelliges Kennwort aus einem Alphabet ohne verwechselbare Zeichen. "Neuen Link erzeugen" macht den alten sofort ungueltig. Aendert sich Passwort, Zugriffsart oder Kontenliste, werden laufende Sitzungen des Links ungueltig.
+- Freigabe-Konten sind eigenstaendig und beruehren die Samba-Benutzer nicht. Die Datei mit den Passwort-Hashes ist nur fuer root lesbar.
+- Wird eine Samba-Freigabe geloescht, werden Links darauf deaktiviert statt still auf ein neues Ziel zu zeigen.
+- Neue Optionen: `sharing_enabled`, `share_port`, `share_bind`, `share_public_url`, `share_allowed_roots`. **Die oeffentliche Freigabe-Seite selbst kommt mit dem naechsten Release.** Links lassen sich schon anlegen, sind aber noch nicht von aussen erreichbar.
+- Freigabe-Links, -Konten und die Dateizugriff-Einstellung sind in die reinstall-sichere Sicherung aufgenommen.
+
+## 3.2.4
+- Fix: 3.2.3 startete nicht (`NameError: name 'serve' is not defined`). Die neue Startfunktion stand unterhalb des Startblocks und war beim Aufruf noch nicht definiert. Verschoben, dazu ein Test, der die Reihenfolge im Quelltext prueft.
+
+## 3.2.3
+- **Webserver:** Die Oberflaeche laeuft jetzt auf waitress, einem fuer den Dauerbetrieb gedachten WSGI-Server, statt auf Flasks Entwicklungsserver. Mehrere Anfragen gleichzeitig blockieren sich nicht mehr, der Server verraet seinen Namen nicht mehr im Antwortkopf. Sollte Ingress auf deinem Geraet Probleme machen: Umgebungsvariable `WEB_SERVER=werkzeug` schaltet fuer dieses Release auf den alten Server zurueck.
+- Hochgeladene Daten werden vor der Verarbeitung nach `/data/tmp` gepuffert statt nach `/tmp`, das auf Home Assistant OS im Arbeitsspeicher liegt.
+- Obergrenze pro Anfrage von 10 GB auf 4 GB gesenkt. Der Puffer liegt auf der Datenpartition, ein einzelner Upload darf sie nicht fuellen.
+
+## 3.2.2
+- Fix: "Zugriff auf alle Dateien" liess sich einschalten, der Dateimanager kam aber nicht hinein. Bei "/" als freigegebener Wurzel zeigte die Wurzelansicht einen einzigen Eintrag "/", der wieder auf sich selbst zeigte. Jetzt wird bei vollem Zugriff das echte Wurzelverzeichnis gelistet, die Pfadleiste hat nur einen "/"-Eintrag und die Aufwaerts-Zeile verschwindet ganz oben.
+
+## 3.2.1
+- **Neu: Dateizugriff in den Einstellungen.** Dort stehen jetzt die freigegebenen Ordner, lassen sich einzeln hinzufuegen und entfernen, und ein Schalter "Zugriff auf alle Dateien" gibt das gesamte Dateisystem frei. Damit kommst du wieder an alles heran, wenn dir die Standardordner aus 3.2.0 zu eng sind. Die Einstellung wird in `/data/file_access.json` gespeichert und ueberlebt Neustarts.
+- Auch bei vollem Zugriff bleiben `/data`, `/proc`, `/sys` und `/dev` gesperrt. In `/data` liegen die Passwort-Hashes des Addons selbst, die anderen drei sind keine echten Dateien.
+- **Sitzungen gehaertet:** Cookies sind jetzt nur ueber HTTP lesbar, auf gleiche Seite beschraenkt und laufen nach 12 Stunden ab. Wird das Admin-Passwort geaendert, werden alle offenen Sitzungen ungueltig.
+- **CSRF-Schutz:** Aendernde Aufrufe brauchen ein Sitzungs-Token. Eine fremde Seite kann damit nicht mehr im Hintergrund Dateien loeschen lassen, waehrend du angemeldet bist.
+- **Einrichtungsmodus:** Ist der Passwortschutz eingeschaltet, aber kein Passwort gesetzt, schaltete sich der Schutz bisher stillschweigend ab und die Oberflaeche war offen. Jetzt sperrt sich das Addon und zeigt eine Anleitung, bis ein Passwort konfiguriert ist.
+- **Dateinamen werden maskiert,** bevor sie in die Oberflaeche geschrieben werden. Ein Dateiname mit Anfuehrungszeichen oder HTML konnte vorher Javascript im Browser ausfuehren.
+
+## 3.2.0
+- **Sicherheit:** Der Dateimanager war nicht auf Verzeichnisse begrenzt. Jeder Pfad, den der Browser schickte, wurde als root geoeffnet - auch `/etc`, `/data` oder `/config`. Da die Oberflaeche wegen `host_network` im LAN erreichbar ist und der Passwortschutz standardmaessig aus war, konnte jedes Geraet im Heimnetz jede Datei des Hosts lesen und schreiben.
+- Alle 21 Stellen, die einen Pfad vom Browser entgegennehmen, laufen jetzt durch eine gemeinsame Pruefung: Symlinks werden aufgeloest, `..` abgewiesen, und das Ergebnis muss in einem erlaubten Ordner liegen. Neue Option `file_allowed_roots` (Vorgabe `/media`, `/mnt`, `/share`, `/config`, `/addon_configs`).
+- `/data`, `/ssl`, `/etc`, `/proc`, `/sys`, `/dev`, `/var`, `/run`, `/boot` und `/root` sind unabhaengig von der Konfiguration gesperrt.
+- Einhaengepunkte koennen nur noch unter `/media` oder `/mnt` liegen. Sicherungsauftraege pruefen Quelle und Ziel auch beim Ausfuehren erneut, weil dort rsync als root laeuft.
+- Beim Hochladen kann der Dateiname nicht mehr aus dem Zielordner ausbrechen, und vorhandene Dateien werden nicht mehr stillschweigend ueberschrieben.
+- Loeschen und Umbenennen sind fuer die erlaubten Wurzeln selbst, alle Einhaengepunkte und alle Freigabeordner gesperrt.
+- Die festen Knoepfe `/media` `/mnt` `/` sind durch die tatsaechlich erlaubten Ordner ersetzt, der Pfadpfad endet nicht mehr im Container-Wurzelverzeichnis.
+
+## 3.1.11
+- Fix: add-on could fail to build/install because `hd-idle` (added in 3.1.10) was in the main `apk add` line — if the package is missing from the base image repos, the whole build aborted
+- `hd-idle` is now installed in a separate, non-fatal step (tries default repos, then edge/community, otherwise continues) — the spindown feature degrades gracefully if the package is unavailable
+
+## 3.1.10
+- New: HDD spindown via `hdd_idle_seconds` option — mounted drives spin down after N seconds of inactivity to save power and reduce noise/wear (0 = disabled, default)
+- Uses I/O-based `hd-idle` (watches `/proc/diskstats`), which works on USB-SATA bridges where `hdparm -S` does not
+- Safe by design: hd-idle runs with a global `-i 0` default and is only pointed at the base disks of drives listed in `mounts.json` — the HA system disk is never spun down
+- Added `hd-idle` to the Dockerfile and `hd_idle_args.py` helper that maps mounted devices to their base disks (e.g. `sdb1 → sdb`)
+
+## 3.1.9
+- Fix (#8): share creation crashed with `PermissionError: Operation not permitted` on exFAT/FAT32 drives — these filesystems have no POSIX permission model, so `os.chmod()` fails. New `ensure_share_dir()` helper tolerates the failure and creates the share anyway (permissions are irrelevant on those filesystems)
+- Fix (#7): macOS Finder / iOS Files app now show correct filenames and metadata — added `vfs objects = catia fruit streams_xattr` plus fruit tuning to the global Samba config (harmless for Windows/Linux clients)
+- Fix (#7): mobile web-GUI file list reflows into a 3-row grid below 600 px so long file/folder names no longer push size/date/action buttons off-screen
+- Fix: clear diagnosis for the #1 mount failure — `mount: permission denied (are you root?)` / `Operation not permitted`. This is not a filesystem problem but the result of **Protection Mode still being enabled**, which makes HA strip the add-on's `CAP_SYS_ADMIN`
+- Mount helper now detects permission errors, logs `CapEff` (all-zero = no capabilities) and prints a clear instruction: turn OFF Protection Mode in the add-on Info tab and restart
+- The GUI error message now says exactly this instead of showing a cryptic mount error
+- DOCS.md: new prominent "disable Protection Mode" section + troubleshooting entry
+
+## 3.1.7
+- Fix: NTFS drives failed to mount with `Failed to create '/dev/fuse': Read-only file system` / `ntfs-3g-mount: fuse device is missing` — HA OS add-on containers expose no `/dev/fuse`, so the userspace ntfs-3g driver cannot run
+- Mount helper now uses the in-kernel `ntfs3` driver (Linux 5.15+, no FUSE required) and only falls back to `ntfs-3g` if the kernel driver is unavailable — applies to explicit NTFS selection, auto-detection and the brute-force loop
+- `fuseblk` (how `/proc/mounts` reports old ntfs-3g mounts) is now recognized on restore and normalized to the `ntfs` tag in the drive list
+
+## 3.1.6
+- Safety: migration step in `run.sh` now strips any leftover bind-mount entries / fields from `/data/mounts.json` on startup — closes a remaining footgun from the removed 3.0.38–3.0.47 bind-mount feature where `rm -rf /share/<name>` could recurse through a still-active bind and wipe the underlying drive
+- DOCS.md: prominent warning section for users upgrading from 3.0.38–3.0.47 with safety instructions (use `rmdir` instead of `rm -rf`, verify with `mount | grep`)
+
+## 3.1.5
+- New: Warning banner across all tabs when Home Assistant's add-on "Protection mode" (gesicherter Modus) is active — explains that drive mounting/management is blocked and points to the fix
+- Detection via `CapEff` in `/proc/self/status` (CAP_SYS_ADMIN bit); reported by `/api/status` as `protection_mode`
+
+## 3.1.4
+- New: Drive health (SMART) card on the Overview page lists every disk with a colored status dot — click an entry to open the full SMART modal
+- Overview card layout is now consistent: every card uses the same flex-column structure with the action / progress area always pinned to the bottom (e.g. CPU usage bar, RAM bar, Disk bar, Samba restart button, SMART refresh button all align on the same baseline)
+- Overview SMART data is cached for 5 minutes to keep page loads snappy; a "Refresh" button forces a re-query
+
+## 3.1.3
+- New: SMART status modal for every drive in the Drives tab
+- Pulse-icon button next to each drive opens a popup with health status (PASSED / FAILED), model, serial, firmware, capacity, drive type (SSD vs RPM), temperature, power-on hours, power-cycle count, ATA error count, and a curated table of SMART attributes
+- NVMe drives show wear used, available spare, media errors, unsafe shutdowns
+- Backend uses `smartctl --json` with automatic fallback through several USB-bridge modes (`sat`, `scsi`, `usbjmicron`, `usbprolific`, `usbsunplus`) so most USB enclosures work too
+- Cleanly degrades to a "SMART data not available" hint when the USB bridge filters SMART commands
+- Dockerfile: `smartmontools` added
+
+## 3.1.2
+- New: double-click a file in the Files tab to preview it in a new browser tab — PDFs use the browser's built-in viewer, images / videos / audio play inline, text files open in the existing editor
+- New backend endpoint `/api/files/view` serves files inline with proper MIME type and HTTP Range support (videos/audio are seekable without full download)
+- Files that the browser can preview show a pointer cursor and a "Double-click to open" tooltip; everything else still uses the Download button as before
+
+## 3.1.1
+- Fix: **"Error: Partition(s) on /dev/sdX are being used"** when initializing a partition table
+  - Server: pre-checks `/proc/mounts` and returns a clear "Unmount first: …" message listing exactly which partition + mountpoint is blocking, instead of forwarding parted's terse error
+  - UI: when opening the Initialize-partition-table modal, mounted partitions are listed up-front and the Initialize button is hard-disabled (typing the confirm string won't bypass it)
+
+## 3.1.0
+- Fix: disk rows no longer say "not mounted" — disks themselves are never mounted, only their partitions are. Disk rows now show the partition count instead (e.g. "3 Partitionen"), or nothing if the disk has no partitions yet
+- Version bump 3.0.x → 3.1.0 marking the Disk-Manager line as feature-complete (partition management, phantom-disk filter, mountpoint reporting, collapse/expand, busy-cursor, FIFO race fix)
+
+## 3.0.67
+- New: hourglass / wait cursor on the entire page while a long disk-manager operation (Format, Create, Init) is running — extra visual signal that something is happening
+
+## 3.0.66
+- Fix: **multiple `Format` clicks queueing up** — long operations now disable their button and show an in-button spinner so the user can't accidentally fire several mkfs in a row
+  - Applies to Format, Create partition, and Initialize partition table
+- Bump server-side MKFS timeout from 5 min → 30 min (mkfs.ntfs on multi-TB drives easily exceeds 5 min)
+
+## 3.0.65
+- New: **collapse/expand partitions per disk** in the Drives tab — click the disk icon (▸/▾ caret indicates state) to hide or show sda1, sda2, … under the parent disk
+- Partition rows are now slightly indented under their parent
+- State is persisted in `localStorage` (`expandedDisks`), default is collapsed
+
+## 3.0.64
+- Fix: **`FIFO-Fehler: [Errno 6] No such device or address: '/tmp/mount_cmd'`** when issuing disk-manager commands back-to-back
+  - `mount_helper.sh` opens the FIFO persistently on fd 3 (+ dummy writer on fd 4) so there's no moment between iterations where the FIFO has no reader
+  - `app.py` retries the FIFO open on `ENXIO` for ~2s before giving up
+
+## 3.0.63
+- Fix: **create partition failed with 500** on fresh disks — the free-space entry from `parted` starts at 0.02 MiB (inside the GPT primary header) and end-MiB equal to disk size overflows the GPT backup header
+  - Server: align start UP to whole MiB (min 1 MiB), align end DOWN to whole MiB
+  - UI: when user keeps the default size (= all free space), send `end_mib: "100%"` so parted handles the backup-header margin itself
+
+## 3.0.62
+- Fix: hide phantom disks (empty card-reader slots / USB hub ports without medium) — checks `/sys/block/<name>/size` and filters in `/api/drives`; `/api/disk/<name>/partitions` returns 410 if no medium
+- Improve: each partition in `/api/disk/<name>/partitions` now reports its real `mountpoint` (string) from `/proc/mounts`, not just a bool
+- `_mounted_paths()` resolves `realpath` both ways so `/dev/disk/by-id/...` matches `/dev/sdb2`
+- (Ports v3.1.1 + v3.1.2 from sibling project NotSoSimpleNas)
+
+## 3.0.61
+- New: **Disk Manager** — manage partition tables and formatting directly from the Drives tab
+  - Gear icon on every non-system drive card opens the disk manager modal
+  - Shows partition layout with sizes, FS types, labels, mount status, and free-space gaps
+  - Create partition in free space, delete partition, format partition (ext4 / exfat / ntfs / vfat / ext3 / ext2)
+  - Initialize partition table (GPT or MBR/msdos) on uninitialized disks
+  - Safety: system disks blocked entirely; mounted partitions require unmount first; every destructive action requires typing the device/partition name to confirm
+- Dockerfile: added `parted`, `dosfstools`, `ntfs-3g-progs`
+- `mount_helper.sh`: new actions `PARTLIST`, `PARTMKLABEL`, `PARTADD`, `PARTRM`, `MKFS`, `PARTPROBE`
+- `app.py`: new endpoints `GET /api/disk/<name>/partitions`, `POST /api/disk/<name>/init`, `POST /api/disk/<name>/partition`, `DELETE /api/disk/<name>/partition/<n>`, `POST /api/disk/<name>/partition/<n>/format`
+
+## 3.0.60
+- New: sortable column header in Files tab — click **Name**, **Größe** or **Datum** to sort, click again to reverse direction (▲ / ▼ indicator)
+- Sort key and direction persist in `localStorage` (keys `nas-files-sort-key`, `nas-files-sort-dir`) — defaults to name ascending
+- Folders and files are sorted within their own group (folders always shown first)
+- Date format unified to `dd/mm/yy HH:MM` (no longer locale-dependent) and labeled accordingly in the column header
+
+## 3.0.59
+- Files tab: size bars, file sizes, dates and action buttons now align in fixed columns across all rows
+- `.factions` column has fixed width (170 px) with right-aligned buttons — delete (rightmost) lines up across rows regardless of how many actions a row has
+- Each action button has a fixed 24×24 px slot so icons stay on the same grid
+
+## 3.0.58
+- Fix: size bars rendered all gray — colored fill was invisible because the inner `<span>` is inline by default and ignored `width`/`height`
+- `.fbar-fill` now `display:block`, `.fbar` now `display:inline-block` — colored fill renders correctly in both the Files list and the Settings legend
+- Selector prefix `.file-row` dropped from `.fbar` rules so the Settings color legend also displays bars
+
+## 3.0.57
+- New: dedicated **Settings** tab in the navigation — moved the "Show size bars" toggle out of the Files toolbar into a proper Settings section
+- Settings tab uses a real on/off toggle switch (not a button) for the size-bars option
+- Color legend is shown next to the toggle so the meaning of each bar color is obvious without hovering files
+- Files tab toolbar is back to upload / mkdir only — no clutter
+
+## 3.0.56
+- New: optional "Size bars" view in the Files tab — colored bars next to each entry visualize file and folder size at a glance (blue ≤10 MB, green ≤50 MB, yellow ≤100 MB, orange ≤1 GB, red >1 GB)
+- Folder sizes are computed recursively on demand (only when the toggle is on); per-folder walk capped at 8 s to keep large trees responsive — incomplete sizes are marked with `≈`
+- Bar length is logarithmic relative to the largest entry in the current view so a 10 MB file remains visible next to a 1 GB one
+- API: `/api/files` accepts new query param `dir_size=1` to recursively compute directory sizes
+- Toggle state persists in `localStorage` (key `nas-show-sizebars`); off by default
+- i18n strings added in DE and EN (`btn_sizebars`, `computing_sizes`, `size_truncated`)
+
+## 3.0.55
+- Fix: shares pointing to a subdirectory under `/mnt/...` were marked `available = no` even when the underlying drive was mounted, because the subdirectory existed only on the container overlay (created before the mount) and was hidden by the live filesystem after mounting
+- `generate_smb_conf.py` now auto-creates the missing subdirectory if its parent is a real mount point — share becomes immediately usable
+- `/mnt/` paths now follow the same "real mount required" rule as `/media/` (was treated as always-available before)
+
+## 3.0.54
+- Default UI language switched to English (`en`); DE/EN toggle remains in the header
+- README, root README and CHANGELOG translated to English; new entries from now on are written in English
+- Add-on description (HA Add-on Store) translated to English
+- Translation files (`de.yaml`, `en.yaml`) extended with the missing options `nas_name`, `smb_port`, `web_gui_enabled`
+
+## 3.0.53
+- Fix: `mount -t ext4` failed with `fsconfig() failed: Can't open blockdev` — HA OS blocks the new kernel mount API (`fsconfig`/`fsopen` syscalls) via seccomp
+- `mount_helper.sh` now automatically falls back to `busybox mount` on `fsconfig()` errors — this uses the old `mount(2)` syscall which is still permitted
+- Applies to all mount paths: direct, auto-detect, brute-force loop
+
+## 3.0.52
+- Fix: USB drives were not mounted at boot (race condition) — `restore_mounts.py` now retries the mount up to 5× with 3 s delay if the device is not yet ready (`Can't open blockdev`)
+- Fix: wrong API endpoint in DOCS.md — `/api/reload-samba` does not exist, the correct one is `/api/samba/restart`
+
+## 3.0.51
+- Fix: backup-job card — Start / Edit / Delete buttons overflowed the card boundary on long paths
+- Card layout restructured: text container (`min-width:0; flex:1`) shrinks if needed, button row (`flex-shrink:0`) always stays fully visible
+- Source and destination paths split onto separate lines with line-wrap (`word-break:break-all`)
+
+## 3.0.50
+- Fix: drive view and user tab kept showing German text (`Einhängen`, `nicht eingehängt`, `Samba-Benutzer` etc.) after switching language — dynamically built JS content was not re-rendered on language change
+- `toggleLang()` now reloads the active tab so all text appears immediately in the chosen language
+
+## 3.0.49
+- Fix: drives were no longer mounted after HA restart — `restore_mounts.py` used `fstype: "auto"` instead of the `resolved_fstype` (e.g. `"ext4"`) detected at mount time, which failed on USB devices
+
+## 3.0.48
+- Bind-mount feature removed: HA OS uses slave mount namespaces (`master:118`) — mounts from an add-on container do not propagate to other containers or HA Core. The feature was therefore ineffective.
+- Mount dialog: checkbox and bind path field removed
+
+## 3.0.47
+- FS tag now stays visible even on unmounted drives
+- New file `/data/fstype_memory.json` remembers the last known FS type per device — populated on every mount and on every drive listing from `/proc/mounts`, never auto-cleared
+- Survives container restarts, unmount and reinstall (`/data` is persistent)
+
+## 3.0.46
+- FS tag display gets two additional sources because HA OS blocks raw block-device reads (`blkid` / `file -s` on block devices) with `EPERM`
+- Source 2: `/proc/mounts` — reliably shows the FS type of every currently mounted device
+- Source 3: `mounts.json` with new field `resolved_fstype` — at mount time, the actual kernel-used type is read from `/proc/mounts` and stored (not just "auto")
+- The drive list now reliably shows the FS tag (e.g. `ext4`) for mounted devices and also for later-unmounted ones whose last mount type is known
+
+## 3.0.45
+- Drive overview: FS-type tag (`ext4`, `ntfs`, …) is reliably shown again
+- When `lsblk` reports no FSTYPE, `blkid` / `blkid -p` / `file -sL` are queried as fallback — same escalation as in the mount helper
+
+## 3.0.44
+- Mount auto-detection significantly more robust
+- Symlinks (e.g. `/dev/disk/by-id/usb-…`) are resolved before probing via `readlink -f`
+- Fourth detection step: `file -s` reads the superblock magic directly (added the `file` package)
+- Brute-force fallback: tries `ext4 → ext3 → ext2 → ntfs-3g → vfat → exfat → btrfs → xfs` in turn if all detectors come up empty — fixes USB devices where `blkid` / `lsblk` return nothing but `mount -t ext4` works
+
+## 3.0.43
+- Bind-mount name under `/share/<name>` is now editable in the mount dialog (input field directly below the checkbox)
+- FS auto-detection in the helper extended to three stages: `blkid` → `blkid -p` (low-level probe) → `lsblk -no FSTYPE`
+- Better helper logs (which method detected, which driver was tried)
+
+## 3.0.42
+- Mount "Auto" now uses `blkid` for FS detection first — works around the misleading "Can't open blockdev" error from `fsconfig()` on USB devices
+- NTFS is automatically mounted via `ntfs-3g` (instead of kernel NTFS read-only)
+- Falls back to bare `mount` if explicit `-t` fails
+- Added `psmisc` (`fuser`) and `lsof` — busy diagnostics on unmount now work properly
+
+## 3.0.41
+- Fix: Mount button did not respond — `JSON.stringify(by_id)` contained double quotes that broke the `onclick="…"` attribute → "Unexpected end of input" when rendering the page
+- Quotes are now HTML-escaped to `&quot;`
+
+## 3.0.40
+- Fix: Unmount button referenced the old `isSdaDevice` function → JS error, click did nothing
+- Unmount dialog now uses the `system_device` flag from the drive API
+
+## 3.0.39
+- More robust drive unmounting
+- Open Samba handles are closed before `umount` (`smbcontrol close-share`)
+- Bind mounts under `/share/` automatically fall back to `umount -l` on "busy"
+- For busy drives: GUI shows blocking processes (`fuser` / `lsof`) and offers "Force unmount"
+
+## 3.0.38
+- New: bind-mount of mounted drives to `/share/<name>` — accessible by HA Core and other add-ons
+- Mount dialog: checkbox "Make accessible to HA Core / other add-ons" (on by default)
+- Bind mounts are saved in `mounts.json` and restored automatically on restart
+- On unmount the bind is removed first, then the actual mount
+- `mount_helper.sh`: new `BIND` action with `mount --make-shared`
+
+## 3.0.37
+- Fix: HA backup location sometimes vanished after a restart (race condition)
+- `smb.conf` is now generated twice — before and after restoring mounts
+
+## 3.0.36
+- All log messages translated to English (run.sh, app.py)
+
+## 3.0.35
+- New: option `web_gui_enabled` — web GUI can be fully disabled (smaller attack surface, Samba-only operation)
+
+## 3.0.34
+- Existing `/dev/sdX` entries are automatically migrated to `/dev/disk/by-id/` paths on startup
+
+## 3.0.33
+- Mounts use stable `/dev/disk/by-id/` paths — survive USB re-numbering after a reboot
+- System devices are detected via `/proc/mounts` (no longer just `sda`)
+- Inactive shares are marked `available = no` in `smb.conf`
+- English documentation (`DOCS.md`) added
+
+## 3.0.32
+- Fix: `/ssl` changed from `ro` to `rw` (certificate folder was read-only)
+- New: configurable `smb_port` for parallel operation with the official Samba add-on
+
+## 3.0.31
+- New: macOS junk files are globally hidden / deleted (`.DS_Store`, `._*`, `.TemporaryItems`, …) via Samba `veto files` + `delete veto files`
+
+## 3.0.0
+- New: Files tab — full file browser with upload, download, copy, move, rename, delete
+- New: Backup tab — create backup jobs, run manually, auto-clean old backups (rsync-based)
+- New: file upload directly via the web GUI (up to 10 GB)
+- New: file download directly from the browser
+- New: create folder in the file browser
+- Dockerfile: rsync added
+
+## 2.2.0
+- New: web GUI port configurable (default: 8099)
+- New: Samba passwords are saved persistently and restored automatically after restart
+
+## 2.1.0
+- Repository renamed to EasyNas-HASSIO-Addon
+- Full README with installation guide, quick start, Nextcloud guide
+- CHANGELOG added
+- Add-on icon and logo
+- Translations (DE/EN)
+- All fixes from 2.0.x consolidated
+
+## 2.0.9
+- Fix: users and groups are restored automatically after container restart
+- Fix: password change re-creates missing Samba entries automatically
+
+## 2.0.8
+- Browser: "Go to" label for navigation, /share button removed
+- Mount field: clearer wording (name or full path)
+
+## 2.0.7
+- Fix: public shares now correctly ignore `valid users`
+- Samba: SMB2/SMB3 protocol range, better NTLM compatibility
+
+## 2.0.4
+- Fix: share directories get correct permissions (2775)
+- Fix: smb.conf reload restarts Samba automatically if not running
+- Samba: `force user = root`, `force group = root` for full compatibility
+
+## 2.0.0
+- New: group management with member assignment
+- New: users and groups as chips in the share configuration
+- New: dark/light theme (HA design)
+- New: sda protection with confirmation dialog
+- New: create folder in the browser
+- New: folder browser for mount paths with quick navigation
+
+## 1.1.2
+- Fix: wsdd as a script instead of pip package (HA wheels index does not have it)
+
+## 1.1.1
+- New: network discovery (Avahi for Linux/macOS, WSDD for Windows 10/11)
+
+## 1.0.9
+- Fix: `apparmor: false` and `privileged: SYS_ADMIN` for mount operations
+
+## 1.0.8
+- All mount points changed from /mnt to /media
+- First release

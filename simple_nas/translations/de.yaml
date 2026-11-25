@@ -1,0 +1,148 @@
+configuration:
+  workgroup:
+    name: Arbeitsgruppe
+    description: Windows-Arbeitsgruppenname (Standard WORKGROUP)
+  nas_name:
+    name: NAS-Name
+    description: NetBIOS / mDNS Hostname, der in Netzwerkbrowsern angezeigt wird (Standard SimpleNAS)
+  log_level:
+    name: Log-Level
+    description: Samba Log-Ausführlichkeit
+  web_port:
+    name: Web-GUI Port
+    description: Port für den direkten Zugriff auf die Web-Oberfläche über http://DEINE-HA-IP:PORT (Standard 8100). Der Knopf 'Öffnen' in Home Assistant hat seinen eigenen Port und funktioniert unabhängig davon.
+  admin_password_enabled:
+    name: Admin-Passwortschutz aktivieren
+    description: Schützt die Web-Oberfläche mit einem Benutzernamen und Passwort. Erfordert auch das Setzen von admin_username und admin_password.
+  admin_username:
+    name: Admin-Benutzername
+    description: Benutzername für den Zugang zur Web-Oberfläche (Standard admin). Nur wirksam wenn admin_password_enabled aktiviert ist.
+  admin_password:
+    name: Admin-Passwort
+    description: Passwort für den Zugang zur Web-Oberfläche. Wird nur als Hash gespeichert. Nur wirksam wenn admin_password_enabled aktiviert ist.
+  admin_ingress_only:
+    name: Admin-Oberflaeche nur ueber Home Assistant
+    description: "Wenn an, antwortet die Admin-Oberflaeche nur noch ueber den Oeffnen-Knopf in Home Assistant (Ingress). Direkter Zugriff ueber http://HA-IP:8100 sowie ueber Nginx Proxy Manager / Cloudflare wird abgewiesen. Nicht einschalten, wenn du die Admin-Oberflaeche ueber eine eigene Domain nutzt."
+  smb_port:
+    name: SMB-Port
+    description: SMB-Port (Standard 445). Ändere auf z.B. 4445 falls das offizielle Samba-Add-on parallel läuft.
+  mdns_enabled:
+    name: mDNS / Bonjour (Avahi)
+    description: "Kündigt das NAS per mDNS/Bonjour an (macOS-Finder, Linux-Dateimanager, Time Machine) und macht es als NASNAME.local erreichbar. Ausschalten, wenn eine andere App mit Host-Netzwerk ebenfalls Avahi startet: Pro Host funktioniert nur ein Avahi, das zweite hängt in \"Host name conflict\". Die Windows-Erkennung (WSDD) läuft weiter."
+  webdav_enabled:
+    name: WebDAV
+    description: "Die Freigaben zusätzlich über WebDAV anbieten (http://DEINE-HA-IP:webdav_port/), z. B. für Handy-Apps, Windows, macOS und den Zugriff von unterwegs. Anmeldung mit den Samba-Benutzern; gleiche Rechte wie bei Samba. Fürs Internet nur über einen Reverse Proxy mit HTTPS veröffentlichen."
+  webdav_port:
+    name: WebDAV-Port
+    description: Port für WebDAV (Standard 8102).
+  ftp_enabled:
+    name: FTP
+    description: "Die Freigaben zusätzlich über FTP anbieten (ftp://DEINE-HA-IP/), für Geräte, die nur FTP können, z. B. IP-Kameras und Scanner. Anmeldung mit den Samba-Benutzern; gleiche Rechte wie bei Samba. Unverschlüsselt – nur im Heimnetz verwenden, den Port nie im Router freigeben."
+  ftp_port:
+    name: FTP-Port
+    description: Port für FTP (Standard 21). Läuft noch ein anderes FTP-Add-on auf Port 21, dieses vorher stoppen oder hier einen anderen Port wählen.
+  ftp_passive_ports:
+    name: FTP-Passiv-Ports
+    description: Portbereich für den passiven FTP-Modus (Standard 30000-30010).
+  web_gui_enabled:
+    name: Web-GUI aktivieren
+    description: Auf false setzen um nur Samba zu starten, ohne Web-Oberfläche (kleinere Angriffsfläche).
+  hdd_idle_seconds:
+    name: Festplatten-Spindown (Sekunden)
+    description: Gemountete Laufwerke nach so vielen Sekunden Inaktivität herunterfahren, um Strom zu sparen und Geräusche/Verschleiß zu reduzieren (0 = deaktiviert). Nutzt I/O-basiertes hd-idle, geeignet für USB-Platten. Betrifft nur in Simple NAS gemountete Laufwerke, niemals die HA-System-Platte. Hinweis - jeder Zugriff auf die Freigabe (Samba-Client, SMART-Abfrage, Backup-Jobs) setzt den Timer zurück.
+  trim_interval_days:
+    name: Automatisches SSD-TRIM (Tage)
+    description: TRIM auf eingehängten Laufwerken alle so viele Tage ausführen (0 = aus, 30 = monatlich). Nur Laufwerke, die TRIM melden, werden einbezogen.
+  trim_usb_unmap:
+    name: TRIM bei USB-Adaptern freischalten
+    description: Viele USB-Gehäuse (z. B. mit Realtek RTL9210 oder ASMedia) können TRIM, Linux schaltet es aber nicht ein. Mit dieser Option schaltet Simple NAS TRIM vor jedem TRIM-Lauf für USB-Laufwerke ein, die laut eigener Angabe UNMAP können. Auf eigenes Risiko - einige wenige Adapter melden TRIM und verarbeiten es fehlerhaft. Vorher sichern. Die System-Festplatte bleibt unberührt.
+  file_allowed_roots:
+    name: Erlaubte Ordner
+    description: Verzeichnisse, die der Dateimanager oeffnen darf. Alles ausserhalb wird abgewiesen. Aendere das nur, wenn du Dateien ausserhalb der Standardordner verwalten musst.
+  sharing_enabled:
+    name: Web-Freigabe aktivieren
+    description: Startet die oeffentliche Freigabe-Seite auf einem eigenen Port. Setzt ein gesetztes Admin-Passwort voraus.
+  share_port:
+    name: Port der Freigabe-Seite
+    description: Port, auf dem die oeffentliche Freigabe-Seite lauscht (Standard 8101). Diesen Port im Nginx Proxy Manager mit einer Domain und TLS veroeffentlichen.
+  share_bind:
+    name: Freigabe-Seite lauscht auf
+    description: 0.0.0.0 = im Netz erreichbar (noetig, wenn der Nginx Proxy Manager als Addon laeuft - der erreicht das Loopback des Hosts nicht). 127.0.0.1 = nur fuer einen Reverse Proxy, der direkt auf dem Host laeuft.
+  share_public_url:
+    name: Oeffentliche Adresse
+    description: Die Adresse, unter der die Freigabe-Seite von aussen erreichbar ist, z. B. https://files.example.com. Wird in die erzeugten Links eingesetzt.
+  share_allowed_roots:
+    name: Fuer Freigaben erlaubte Ordner
+    description: Nur Ordner unterhalb dieser Verzeichnisse koennen per Link geteilt werden. /config und /data sind grundsaetzlich ausgeschlossen.
+  share_trusted_proxies:
+    name: Vertrauenswuerdige Proxys
+    description: "Nur von diesen Adressen werden X-Forwarded-For/-Proto uebernommen. Vorgabe: localhost und das Supervisor-Netz (dort laeuft der Nginx Proxy Manager als Addon)."
+  share_cookie_secure:
+    name: Freigabe-Cookie nur ueber HTTPS
+    description: An lassen, wenn die Seite ueber HTTPS veroeffentlicht wird (Normalfall). Nur zum Testen ueber http:// ausschalten.
+  share_session_hours:
+    name: Sitzungsdauer der Freigabe-Seite (Stunden)
+    description: Wie lange eine Anmeldung an einem Link gilt.
+  share_sandbox:
+    name: Freigabe-Seite abschotten
+    description: "auto (empfohlen): die oeffentliche Seite laeuft als eigener Prozess ohne root und sieht /config, /ssl, andere Addons und Backups nicht. on: erzwingen, sonst startet die Seite nicht. off: wie frueher im Hauptprozess."
+  share_log_max_mb:
+    name: Groesse des Zugriffsprotokolls (MB)
+    description: Das Protokoll wird bei dieser Groesse rotiert, eine aeltere Kopie bleibt erhalten.
+  share_zip_max_gb:
+    name: "ZIP-Download: maximale Groesse (GB)"
+    description: "Ordner ueber dieser Groesse werden nicht als ZIP angeboten. Gilt fuer Freigabe-Seite und Dateimanager."
+  share_zip_max_files:
+    name: "ZIP-Download: maximale Dateianzahl"
+    description: "Ordner mit mehr Dateien werden nicht als ZIP angeboten."
+  share_zip_compress:
+    name: "ZIP komprimieren"
+    description: "Aus = nur packen (schnell, Fotos und Videos lassen sich ohnehin nicht weiter verkleinern). An = Deflate, kostet auf kleinen Rechnern spuerbar CPU."
+  share_max_upload_mb:
+    name: "Upload: maximale Dateigroesse (MB)"
+    description: "Groesste einzelne Datei, die ueber einen Link hochgeladen werden darf. Der Upload wird vor der Verarbeitung auf der Datenpartition gepuffert - genug freien Platz einplanen."
+  share_upload_blocked_ext:
+    name: "Upload: gesperrte Dateiendungen"
+    description: "Diese Endungen werden abgelehnt, auch mitten im Namen (x.html.txt). Ausfuehrbare Dateien und HTML/SVG, die vom eigenen Server ausgeliefert wuerden."
+  share_upload_allowed_ext:
+    name: "Upload: erlaubte Dateiendungen (optional)"
+    description: "Wenn gesetzt, sind nur diese Endungen erlaubt, z. B. jpg, png, pdf. Leer = alles ausser den gesperrten."
+  share_clamav_enabled:
+    name: "Virenpruefung beim Upload"
+    description: "Hochgeladene Dateien werden an das ClamAV-Addon (clamd) uebergeben und bei Fund abgewiesen. Im Reiter Teilen gibt es einen Test-Knopf."
+  share_clamav_host:
+    name: "clamd-Adresse"
+    description: "Adresse des clamd. Das ClamAV-Addon im Host-Netz ist unter 127.0.0.1 erreichbar."
+  share_clamav_port:
+    name: "clamd-Port"
+    description: "TCP-Port des clamd (Standard 3310). Im ClamAV-Addon muss der TCP-Socket eingeschaltet sein."
+  share_clamav_timeout:
+    name: "Virenpruefung: Zeitlimit (Sekunden)"
+    description: "Laengste Wartezeit auf ein Ergebnis je Datei."
+  share_clamav_on_error:
+    name: "Virenpruefung nicht erreichbar"
+    description: "reject = Upload ablehnen, wenn clamd nicht antwortet (empfohlen). accept = trotzdem annehmen und im Protokoll vermerken."
+  share_clamav_large_file:
+    name: "Datei zu gross fuer die Pruefung"
+    description: "clamd prueft Datenstroeme nur bis zu seinem StreamMaxLength (Standard 25 MB); danach wird der Pfad-Modus versucht. Schlaegt auch der fehl: accept = annehmen, reject = ablehnen."
+  share_log_export_path:
+    name: "Zugriffsprotokoll zusaetzlich exportieren nach"
+    description: "Zweite Kopie des Zugriffsprotokolls an einem Ort, den das CrowdSec-Addon lesen kann, z. B. /config/.simplenas/share_access.log. Leer = Standardpfad, den der Knopf 'CrowdSec einrichten' setzt. Achtung: /share ist im CrowdSec-Addon nicht eingebunden, ein Protokoll dort bleibt fuer CrowdSec unsichtbar. Dazu im Reiter Teilen 'CrowdSec einrichten' klicken."
+  collabora_enabled:
+    name: "Collabora Online einbinden"
+    description: "Office-Dateien (docx, xlsx, odt, ...) auf der Freigabe-Seite im Browser oeffnen und - bei Links mit 'Bearbeiten erlauben' - bearbeiten. Braucht einen laufenden Collabora-Server."
+  collabora_url:
+    name: "Collabora: oeffentliche Adresse"
+    description: "Adresse, unter der der Browser Collabora erreicht, z. B. https://collabora.example.com."
+  collabora_internal_url:
+    name: "Collabora: interne Adresse (optional)"
+    description: "Nur fuer die Abfrage der Dateitypen durch Simple NAS, z. B. https://homeassistant:9980, wenn die oeffentliche Adresse vom Server aus nicht erreichbar ist (Cloudflare-Pruefung). Leer = oeffentliche Adresse."
+  collabora_wopi_url:
+    name: "Adresse, unter der Collabora Simple NAS erreicht (optional)"
+    description: "Leer = Oeffentliche Adresse der Freigabe-Seite. Nur setzen, wenn Collabora die oeffentliche Adresse nicht erreicht, z. B. http://homeassistant:8101 - dann muss dieser Host in Collabora als WOPI-Host erlaubt sein."
+  collabora_verify_tls:
+    name: "Collabora: TLS-Zertifikat pruefen"
+    description: "An lassen. Nur ausschalten, wenn die interne Adresse ein Zertifikat fuer einen anderen Namen hat."
+  collabora_verify_proof:
+    name: "Collabora: Signatur der Aufrufe pruefen"
+    description: "An lassen: nur der eingestellte Collabora-Server darf Dateien ueber die Editor-Schnittstelle lesen und speichern. Nur zur Fehlersuche ausschalten."
