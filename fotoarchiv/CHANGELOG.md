@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.66.2
+- Graceful shutdown: handles SIGTERM, closes database cleanly (WAL checkpoint) and
+  exits with code 0 instead of 143, so the Supervisor no longer reports an unhandled SIGTERM.
+
 ## 0.66.1
 - Prebuilt images from GitHub Container Registry: installs and updates no
   longer build locally.

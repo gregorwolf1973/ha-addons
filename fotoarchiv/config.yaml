@@ -1,6 +1,6 @@
 name: "Fotoarchiv"
 description: "Photo and video library: timeline, world map, face recognition, plain-language search, in-file editing"
-version: "0.66.1"
+version: "0.66.2"
 image: ghcr.io/gregorwolf1973/{arch}-addon-fotoarchiv
 url: "https://github.com/gregorwolf1973/fotoarchiv-addon"
 slug: "fotoarchiv"
