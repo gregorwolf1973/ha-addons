@@ -41,8 +41,7 @@ a new add-on). Back up the add-on's data first.
 | Hardware Monitor | Live overview of hardware resources: CPU, RAM, disks, network and top processes | 2.7.1 | aarch64, amd64, armv7 | [hardware-monitor-addon](https://github.com/gregorwolf1973/hardware-monitor-addon) |
 | DokuWiki | DokuWiki running as a Home Assistant Add-on | 1.0.7 | aarch64, amd64 | [Hassioadon_Dokuwiki](https://github.com/gregorwolf1973/Hassioadon_Dokuwiki) |
 | Heimdall | Heimdall Application Dashboard for Home Assistant | 2.8.1 | aarch64, amd64 | [Hassio_Heimdall](https://github.com/gregorwolf1973/Hassio_Heimdall) |
-| LibrePhotos | Self-hosted photo management with AI face recognition and automatic classification | 0.14 | amd64, aarch64 | [LibrePhotos-HASSIO-Addon](https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon) |
-| Mailwächter | Überwacht das Gmail-Postfach per IMAP IDLE, prüft jede neue Mail auf Betrug und verschiebt gefährliche Mails | 0.2.0 | aarch64, amd64 | [mailwaechter-addon](https://github.com/gregorwolf1973/mailwaechter-addon) |
+| LibrePhotos | Experimental – for photo management please use the Fotoarchiv add-on instead (same store) | 0.14 | amd64, aarch64 | [LibrePhotos-HASSIO-Addon](https://github.com/gregorwolf1973/LibrePhotos-HASSIO-Addon) |
 | OnionShare | Share & receive files, host websites and chat anonymously via Tor | 0.1.4 | aarch64, amd64 | [onionshare-addon](https://github.com/gregorwolf1973/onionshare-addon) |
 | PictureView | Security camera image viewer with timeline and optional auto-delete | 0.13 | aarch64, amd64, armv7 | [PictureView](https://github.com/gregorwolf1973/PictureView) |
 | Recon | Network Scanner - IP/Port scanning with Nmap, WLAN scanning with iw | 1.5.11 | aarch64, amd64 | [Racon-addon](https://github.com/gregorwolf1973/Racon-addon) |

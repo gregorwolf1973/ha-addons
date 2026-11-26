@@ -1,6 +1,7 @@
 name: "Seafile"
 description: "Self-hosted file sync and sharing — Seafile server with built-in MariaDB"
 version: "0.2.12"
+stage: experimental
 image: ghcr.io/gregorwolf1973/{arch}-addon-seafile
 url: "https://github.com/gregorwolf1973/seafile-hassio-addon"
 slug: "seafile"

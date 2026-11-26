@@ -1,6 +1,7 @@
 name: "Cloudflare Route Manager"
 description: "Manage Cloudflare DNS records and tunnel routes from Home Assistant; adds Cloudflare IPs to trusted_proxies automatically"
 version: "1.0.6"
+stage: experimental
 image: ghcr.io/gregorwolf1973/{arch}-addon-cloudflare_routes
 url: "https://github.com/gregorwolf1973/cloudflare-routes-addon"
 slug: "cloudflare_routes"

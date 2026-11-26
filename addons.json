@@ -110,12 +110,6 @@
       "aktiv": true
     },
     {
-      "repo": "mailwaechter-addon",
-      "path": "mailwaechter",
-      "slug": "mailwaechter",
-      "aktiv": true
-    },
-    {
       "repo": "onionshare-addon",
       "path": "onionshare",
       "slug": "onionshare",
